@@ -1,0 +1,2 @@
+# CRM Notas de Venta - Palaversich S.A.
+# Utiliza la librería estándar de Python (http.server, socketserver)

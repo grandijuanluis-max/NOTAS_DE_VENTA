@@ -1,0 +1,1084 @@
+/* ==========================================================================
+   CRM PRESEA ERP — ESTILO SG MONTAJES (GLASSMORPHISM & BOCA/SG THEME)
+   Inspirado en el sistema de Presupuestos de SG Montajes
+   ========================================================================== */
+
+:root {
+  --bg-gradient-start: #003D78;
+  --bg-gradient-end: #001938;
+
+  /* Colores SG Montajes / Boca Juniors */
+  --primary: #00529F;        /* Azul Boca / SG */
+  --primary-hover: #003D78;
+  --primary-light: rgba(0, 82, 159, 0.25);
+  
+  --secondary: #64748b;
+  --secondary-hover: #475569;
+  
+  --success: #10b981;        /* Verde esmeralda */
+  --success-hover: #059669;
+  --success-bg: rgba(16, 185, 129, 0.15);
+  
+  --danger: #f43f5e;
+  --danger-hover: #e11d48;
+  --danger-bg: rgba(244, 63, 94, 0.15);
+  
+  --warning: #F3B229;        /* Amarillo / Oro SG Montajes */
+  --warning-hover: #D09315;
+  --accent: #F3B229;
+  
+  --text-main: #ffffff;      /* Texto blanco puro */
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  
+  /* Glassmorphism SG Montajes */
+  --glass-bg: rgba(0, 15, 35, 0.92);
+  --glass-card: rgba(0, 18, 42, 0.88);
+  --glass-border: rgba(243, 178, 41, 0.45);        /* Borde dorado sutil */
+  --glass-border-subtle: rgba(255, 255, 255, 0.12);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);   /* Sombra profunda */
+  
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --transition: all 0.25s ease;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  background: linear-gradient(rgba(0, 34, 68, 0.72), rgba(0, 20, 45, 0.88)), url('fondo_app.png') no-repeat center center fixed;
+  background-size: cover;
+  background-color: #002244;
+  color: var(--text-main);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* ==========================================================================
+   HEADER SUPERIOR (ESTILO GLASSMORPHISM SG MONTAJES)
+   ========================================================================== */
+.app-header {
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1.5px solid var(--glass-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  padding: 10px 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.brand-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo {
+  background: #ffffff;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 10px rgba(243, 178, 41, 0.3);
+  border: 1.5px solid var(--warning);
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.brand-logo:hover {
+  transform: scale(1.04);
+}
+
+.brand-logo img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.brand-logo.letter-fallback {
+  color: white;
+  font-weight: 800;
+  font-size: 20px;
+}
+
+.brand-text h1 {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.brand-text p {
+  font-size: 11.5px;
+  color: var(--warning);
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+/* Selector de Empresa SG */
+.company-switcher-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 25, 55, 0.8);
+  border: 1.5px solid var(--warning);
+  box-shadow: 0 0 14px rgba(243, 178, 41, 0.2);
+  padding: 4px 12px;
+  border-radius: 10px;
+}
+
+.switcher-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--warning);
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.company-select-dropdown {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(243, 178, 41, 0.5);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.company-select-dropdown:hover,
+.company-select-dropdown:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+}
+
+/* Menú de Pestañas tipo SG Montajes */
+.nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-tab {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition);
+  outline: none;
+  user-select: none;
+}
+
+.nav-tab i {
+  font-size: 13px;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+
+.nav-tab:hover {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #38bdf8;
+  transform: translateY(-1px);
+}
+
+.nav-tab:hover i {
+  color: #38bdf8;
+}
+
+.nav-tab.active {
+  background: linear-gradient(135deg, rgba(0, 82, 159, 0.75), rgba(0, 61, 120, 0.9));
+  border: 1.5px solid var(--warning);
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(243, 178, 41, 0.3);
+}
+
+.nav-tab.active i {
+  color: var(--warning);
+}
+
+/* Estado y Usuario */
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(243, 178, 41, 0.4);
+  color: var(--warning);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--success);
+  box-shadow: 0 0 8px var(--success);
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+/* ==========================================================================
+   CONTENEDOR PRINCIPAL Y PANELES GLASSMORPHISM
+   ========================================================================== */
+.main-container {
+  flex: 1;
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tab-pane {
+  display: none;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.tab-pane.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Tarjeta Glassmorphic SG Montajes */
+.card {
+  background: var(--glass-card);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  margin-bottom: 20px;
+  transition: border-color 0.3s ease;
+}
+
+.card:hover {
+  border-color: rgba(243, 178, 41, 0.65);
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--warning);
+  letter-spacing: 0.4px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+}
+
+.badge-empresa-pill {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(0, 20, 45, 0.8);
+  border: 1.5px solid var(--primary);
+  color: #38bdf8;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.credito-display-box {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ==========================================================================
+   GRILLAS Y FORMULARIOS
+   ========================================================================== */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 1024px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .grid-4, .grid-2 { grid-template-columns: 1fr; }
+}
+
+.form-group {
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.form-control {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.75);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #ffffff;
+  outline: none;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.form-control:focus {
+  background: rgba(15, 23, 42, 0.95);
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.form-control:read-only {
+  background: rgba(15, 23, 42, 0.5);
+  color: #94a3b8;
+  border-color: rgba(255, 255, 255, 0.08);
+  cursor: default;
+}
+
+/* Autocomplete desplegable */
+.autocomplete-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(11, 19, 41, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid var(--warning);
+  border-radius: 0 0 10px 10px;
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+  display: none;
+}
+
+.autocomplete-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background 0.15s ease;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.selected {
+  background: rgba(0, 82, 159, 0.65) !important;
+  border-left: 3px solid var(--warning);
+}
+
+.custom-table tr.selected-row {
+  background: rgba(0, 82, 159, 0.45) !important;
+  outline: 1.5px solid var(--warning);
+}
+
+.autocomplete-item .title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.autocomplete-item .subtitle {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* ==========================================================================
+   CARGA DE PRODUCTOS Y TABLA
+   ========================================================================== */
+.product-picker-row {
+  display: grid;
+  grid-template-columns: 2fr 110px 130px 100px 90px auto;
+  gap: 10px;
+  align-items: flex-end;
+  background: rgba(0, 25, 55, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 14px;
+  border-radius: 12px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 1024px) {
+  .product-picker-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.table-responsive {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 15, 35, 0.6);
+  margin-bottom: 20px;
+}
+
+.custom-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.custom-table th {
+  background: rgba(0, 35, 75, 0.85);
+  color: var(--warning);
+  font-weight: 800;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 11px 12px;
+  border-bottom: 1.5px solid var(--glass-border);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.custom-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  vertical-align: middle;
+}
+
+.custom-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.custom-table tbody tr:hover {
+  background: rgba(56, 189, 248, 0.12);
+}
+
+/* ==========================================================================
+   TOTALES (ESTILO SG MONTAJES - NÚMEROS DORADOS DESTACADOS)
+   ========================================================================== */
+.totals-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.totals-card {
+  min-width: 320px;
+  background: rgba(0, 20, 50, 0.85);
+  border: 1.5px solid var(--warning);
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(243, 178, 41, 0.2);
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 13px;
+  color: #cbd5e1;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.total-row span:last-child,
+.total-row strong {
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.total-row.grand-total {
+  border-bottom: none;
+  border-top: 2px solid var(--warning);
+  margin-top: 8px;
+  padding-top: 10px;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.total-row.grand-total span:last-child {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--warning);
+  text-shadow: 0 0 14px rgba(243, 178, 41, 0.45);
+}
+
+/* ==========================================================================
+   BOTONES PREMIUM (ESTILO SG MONTAJES)
+   ========================================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: var(--transition);
+  outline: none;
+  user-select: none;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #00529F, #003D78);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 82, 159, 0.4);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #0284c7, #00529F);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.5);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+
+.btn-success:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.5);
+}
+
+.btn-outline {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.btn-outline:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  transform: translateY(-2px);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #f43f5e, #e11d48);
+  color: #ffffff;
+}
+
+.btn-danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(244, 63, 94, 0.4);
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 11px;
+  border-radius: 6px;
+}
+
+/* ==========================================================================
+   BADGES Y ESTADOS
+   ========================================================================== */
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.badge-stock-ok {
+  background: var(--success-bg);
+  color: #34d399;
+  border: 1px solid #10b981;
+}
+
+.badge-stock-low {
+  background: var(--danger-bg);
+  color: #f87171;
+  border: 1px solid #ef4444;
+}
+
+/* Radios Palaversich */
+.radio-option-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+}
+
+.radio-option-item input[type="radio"] {
+  width: auto;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   MODALES (PREVIEW OFICIAL NOTAVTA1_P Y DATOS ADICIONALES)
+   ========================================================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 10, 25, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-overlay.active {
+  display: flex;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-card {
+  background: var(--glass-card);
+  border: 1.5px solid var(--warning);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  background: rgba(0, 25, 60, 0.9);
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  background: rgba(0, 20, 50, 0.9);
+  padding: 12px 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ==========================================================================
+   COMPROBANTE OFICIAL PRESEA ERP (NOTAVTA1_P)
+   Conserva el formato oficial de papel para impresión y PDF
+   ========================================================================== */
+.presea-report-wrapper {
+  background: #ffffff;
+  color: #0f172a;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  font-size: 11px;
+  line-height: 1.25;
+  padding: 20px 24px;
+  max-width: 860px;
+  margin: 0 auto;
+  border: 1px solid #c0c0c0;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Gota de Agua / Marca de Agua Oficial Presea */
+.presea-watermark-overlay {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-18deg);
+  width: 420px;
+  max-width: 65%;
+  opacity: 0.09;
+  pointer-events: none;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.presea-watermark-overlay img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.presea-header-grid,
+.presea-client-box,
+.presea-table,
+.presea-bottom-grid,
+.presea-footer-bar {
+  position: relative;
+  z-index: 1;
+}
+
+.presea-header-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1fr;
+  align-items: center;
+  border: 1.5px solid #a0a0a0;
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.presea-company-col {
+  text-align: left;
+}
+
+.presea-company-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.presea-print-logo-box {
+  width: 58px;
+  height: 48px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  flex-shrink: 0;
+}
+
+.presea-print-logo-box img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.presea-company-name {
+  font-size: 18px;
+  font-weight: 900;
+  color: #0f172a;
+  text-transform: uppercase;
+}
+
+.presea-company-sub {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.presea-box-x-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.presea-box-x {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 900;
+  background: #f8fafc;
+}
+
+.presea-invalido-factura {
+  font-size: 7.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-top: 3px;
+  line-height: 1.1;
+}
+
+.presea-doc-info-col {
+  text-align: right;
+}
+
+.presea-doc-title {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+.presea-doc-number {
+  font-size: 15px;
+  font-weight: 800;
+  font-family: monospace;
+  margin-top: 2px;
+}
+
+.presea-doc-date {
+  font-size: 11px;
+  margin-top: 3px;
+  font-weight: 600;
+}
+
+.presea-client-box {
+  border: 1.5px solid #a0a0a0;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+
+.presea-client-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3px;
+  font-size: 11px;
+}
+
+.presea-client-row.full {
+  display: block;
+}
+
+.presea-label {
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.presea-val {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.presea-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  border: 1.5px solid #a0a0a0;
+}
+
+.presea-table th {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 5px 6px;
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  text-align: left;
+  color: #1e293b;
+}
+
+.presea-table td {
+  border: 1px solid #e2e8f0;
+  padding: 4px 6px;
+  font-size: 10.5px;
+  color: #0f172a;
+}
+
+.presea-bottom-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.presea-left-col {
+  border: 1.5px solid #a0a0a0;
+  border-radius: 4px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.presea-left-section {
+  margin-bottom: 4px;
+}
+
+.presea-left-title {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.presea-left-text {
+  font-size: 10.5px;
+  color: #0f172a;
+}
+
+.presea-deuda-line {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid #cbd5e1;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #b91c1c;
+  display: flex;
+  justify-content: space-between;
+}
+
+.presea-right-col {
+  border: 1.5px solid #a0a0a0;
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+
+.presea-tot-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 11px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.presea-tot-row strong {
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.presea-tot-row.grand-total-row {
+  border-bottom: none;
+  border-top: 2px solid #0f172a;
+  margin-top: 4px;
+  padding-top: 6px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.presea-tot-row.grand-total-row strong {
+  font-size: 15px;
+}
+
+.presea-footer-bar {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8.5px;
+  color: #64748b;
+  margin-top: 10px;
+  padding-top: 4px;
+  border-top: 1px solid #cbd5e1;
+}
+
+.presea-logo-tag {
+  font-weight: 900;
+  color: #0284c7;
+  letter-spacing: 0.5px;
+}
