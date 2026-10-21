@@ -235,6 +235,7 @@ body {
 
 /* Estado y Usuario */
 .header-status {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -584,6 +585,8 @@ body {
 
 .custom-table tbody tr {
   transition: background 0.15s ease;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 42px;
 }
 
 .custom-table tbody tr:hover {
@@ -886,11 +889,12 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) rotate(-12deg);
-  width: 460px;
-  max-width: 65%;
-  opacity: 0.08;
+  width: 520px;
+  max-width: 75%;
+  opacity: 0.16;
   pointer-events: none;
-  z-index: 0;
+  z-index: 5;
+  mix-blend-mode: multiply;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -900,6 +904,7 @@ body {
   width: 100%;
   height: auto;
   object-fit: contain;
+  display: block;
 }
 
 /* Recuadros Oficiales con borde gris oscuro de 2px y esquinas redondeadas */
@@ -1377,13 +1382,685 @@ body.printing-voucher-active {
     color: #ffffff !important;
   }
 
-  /* Gota de agua suave */
+  /* Gota de agua en impresión oficial */
   .voucher-watermark {
-    opacity: 0.08 !important;
+    opacity: 0.16 !important;
+    z-index: 5 !important;
+    mix-blend-mode: multiply !important;
+    display: flex !important;
+    position: absolute !important;
   }
 
   @page {
     size: A4 portrait;
     margin: 6mm 8mm;
   }
+}
+
+/* ==================================================================== */
+/* CHAT INTERNO, PRESENCIA Y GRUPOS EN TIEMPO REAL (SG MONTAJES)        */
+/* ==================================================================== */
+
+/* Pill de usuarios en línea en el Header */
+.online-users-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #6ee7b7;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.25s ease;
+}
+
+.online-users-pill:hover {
+    background: rgba(16, 185, 129, 0.22);
+    border-color: #10b981;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.online-pulse-dot {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: sgPulseGreen 1.8s infinite;
+}
+
+@keyframes sgPulseGreen {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+/* Dropdown de usuarios en línea */
+.online-users-dropdown {
+    position: absolute;
+    top: 46px;
+    right: 0px;
+    width: 320px;
+    max-height: 420px;
+    overflow-y: auto;
+    z-index: 10005;
+    padding: 12px;
+    background: rgba(15, 23, 42, 0.96) !important;
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    box-shadow: 0 12px 36px rgba(0,0,0,0.5);
+    border-radius: 12px;
+}
+
+.online-users-dropdown .user-item-row:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* --- WIDGET FLOTANTE DE CHAT INTERNO --- */
+.sg-chat-widget {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 99990;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Botón flotante para abrir chat */
+.sg-chat-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #0284c7 100%);
+    color: #ffffff;
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    border-radius: 30px;
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.45), 0 2px 6px rgba(0,0,0,0.3);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    user-select: none;
+}
+
+.sg-chat-toggle-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.6), 0 4px 10px rgba(0,0,0,0.4);
+    border-color: #38bdf8;
+}
+
+.sg-chat-toggle-btn.chat-open {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    border-color: rgba(56, 189, 248, 0.4);
+}
+
+.chat-unread-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #ff3b30;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 7px;
+    border-radius: 12px;
+    border: 2px solid #0f172a;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    animation: sgBadgeBounce 0.4s ease;
+}
+
+@keyframes sgBadgeBounce {
+    0% { transform: scale(0.3); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* Ventana principal de chat */
+.sg-chat-window {
+    position: fixed;
+    bottom: 82px;
+    right: 24px;
+    width: 390px;
+    height: 540px;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1.5px solid rgba(56, 189, 248, 0.4);
+    border-radius: 16px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 99991;
+    animation: sgChatSlideUp 0.25s ease-out;
+}
+
+@keyframes sgChatSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Cabecera del chat */
+.sg-chat-header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+    border-bottom: 1px solid rgba(56, 189, 248, 0.25);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sg-chat-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sg-chat-icon-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: #cbd5e1;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.sg-chat-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+/* Barra de pestañas (Chat / Colegas) */
+.sg-chat-tabs-bar {
+    display: flex;
+    background: rgba(0, 0, 0, 0.35);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sg-chat-tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 9px 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.sg-chat-tab-btn.active {
+    color: #38bdf8;
+    border-bottom-color: #38bdf8;
+    background: rgba(56, 189, 248, 0.06);
+}
+
+.sg-chat-tab-btn:hover:not(.active) {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* Área de mensajes */
+.sg-chat-messages-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sg-chat-messages-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 14px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Indicador de escribiendo */
+.sg-chat-typing-indicator {
+    padding: 4px 14px;
+    font-size: 11px;
+    font-style: italic;
+    color: #38bdf8;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* Panel de contactos */
+.sg-chat-contacts-pane {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.chat-contact-item:hover {
+    background: rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Footer con input de chat */
+.sg-chat-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(15, 23, 42, 0.95);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sg-chat-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sg-chat-input {
+    flex: 1;
+    background: rgba(30, 41, 59, 0.85);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.sg-chat-input:focus {
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.sg-chat-input::placeholder {
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.sg-chat-send-btn {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.sg-chat-send-btn:hover {
+    background: #1d4ed8;
+    transform: scale(1.05);
+}
+
+.sg-chat-emojis-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sg-emoji-btn {
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: background 0.15s;
+    user-select: none;
+}
+
+.sg-emoji-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: scale(1.2);
+}
+
+.chat-conv-item:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(56, 189, 248, 0.5) !important;
+    transform: translateX(2px);
+}
+
+.sg-chat-create-group-pane label:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Modo Responsive para celulares */
+@media (max-width: 600px) {
+    .sg-chat-window {
+        bottom: 0;
+        right: 0;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        border: none;
+    }
+    .online-users-dropdown {
+        right: 10px;
+        width: 90vw;
+    }
+}
+
+/* Ocultar en impresión */
+@media print {
+    .sg-chat-widget,
+    .online-users-pill,
+    .online-users-dropdown {
+        display: none !important;
+    }
+}
+
+/* Badge de Vendedor en Grilla de Clientes */
+.badge-vendedor {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: monospace;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   PANTALLA DE LOGIN Y AISLAMIENTO DE EMPRESA
+   ========================================================================== */
+.login-screen-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 10, 26, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.login-card {
+  background: rgba(0, 20, 48, 0.92);
+  border: 1.5px solid var(--warning);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(243, 178, 41, 0.2);
+  width: 100%;
+  max-width: 480px;
+  padding: 32px 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #10b981, #f3b229, #38bdf8);
+}
+
+.login-brand {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.login-logo-circle {
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(243, 178, 41, 0.25), rgba(0, 82, 159, 0.4));
+  border: 1.5px solid var(--warning);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: var(--warning);
+  margin-bottom: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.login-brand h2 {
+  font-size: 19px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.login-brand p {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.login-alert {
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  color: #fca5a5;
+  font-size: 12.5px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: shake 0.3s ease-in-out;
+}
+
+.login-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-input-icon {
+  position: absolute;
+  left: 14px;
+  color: #64748b;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.login-input {
+  width: 100%;
+  padding-left: 40px !important;
+  padding-right: 42px !important;
+  height: 44px;
+  background: rgba(0, 15, 35, 0.8) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 10px !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  transition: all 0.2s ease;
+}
+
+.login-input:focus {
+  border-color: var(--warning) !important;
+  box-shadow: 0 0 12px rgba(243, 178, 41, 0.3) !important;
+  background: rgba(0, 20, 45, 0.95) !important;
+}
+
+.btn-toggle-password {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 6px;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+
+.btn-toggle-password:hover {
+  color: var(--warning);
+}
+
+.login-btn-submit {
+  width: 100%;
+  height: 46px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #f3b229, #d09315);
+  border: none;
+  color: #001f3f;
+  box-shadow: 0 4px 18px rgba(243, 178, 41, 0.4);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  margin-top: 6px;
+}
+
+.login-btn-submit:hover {
+  background: linear-gradient(135deg, #ffd05b, #f3b229);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(243, 178, 41, 0.5);
+}
+
+.login-btn-submit:active {
+  transform: translateY(0);
+}
+
+/* Sección de Acceso Rápido / Demo */
+.login-quick-section {
+  margin-top: 20px;
+  background: rgba(0, 15, 35, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.login-quick-header {
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.login-quick-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+}
+
+.login-quick-header i {
+  transition: transform 0.25s ease;
+}
+
+.login-quick-body {
+  padding: 12px 14px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.login-quick-title {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.login-quick-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.btn-quick-login {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-quick-login:hover {
+  background: rgba(243, 178, 41, 0.2);
+  border-color: var(--warning);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* Botón Salir en Header */
+.btn-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  color: #fca5a5;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.btn-logout:hover {
+  background: rgba(244, 63, 94, 0.35);
+  border-color: #f43f5e;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-logout:active {
+  transform: translateY(0);
 }

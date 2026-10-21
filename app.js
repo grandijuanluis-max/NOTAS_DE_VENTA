@@ -44,32 +44,164 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function getUsuarioActivo() {
+    if (window.CRMAuth && typeof window.CRMAuth.getAuthSession === "function") {
+      const sess = window.CRMAuth.getAuthSession();
+      if (sess && sess.username) return sess.username.trim();
+    }
     const cfg = getSystemConfig();
     return (cfg.usuario || "JUANLUIS").trim();
   }
+
+  // Obtener el número de vendedor asignado al usuario activo (Palaversich)
+  function getVendedorAsignadoUsuario() {
+    if (window.CRMAuth && typeof window.CRMAuth.getAuthSession === "function") {
+      const sess = window.CRMAuth.getAuthSession();
+      if (sess && sess.vendedor !== undefined && sess.vendedor !== "") {
+        return String(sess.vendedor).trim();
+      }
+    }
+    const cfg = getSystemConfig();
+    if (cfg.vendedorNumero !== undefined && cfg.vendedorNumero !== "") {
+      return String(cfg.vendedorNumero).trim();
+    }
+    const user = getUsuarioActivo().toUpperCase();
+    const mapVend = {
+      'CARLOS': '4',
+      'ILARRAZ': '4',
+      'FERNANDO': '7',
+      'FERNANDO5': '5',
+      'BATO': '7',
+      'JUANCRUZ': '12',
+      'ILLIA': '12',
+      'BRUNO': '11',
+      'SALEMI': '11',
+      'EMANUEL': '13',
+      'MOLINA': '13',
+      'MARTIN': '3',
+      'DIAZ': '3',
+      'SEBASTIAN': '1',
+      'ROMERO': '1',
+      'PABLO': '6',
+      'GALLARDO': '6',
+      'EDUARDO': '8',
+      'MONTIEL': '8',
+      'JOSE': '10',
+      'MAGGIO': '10',
+      'JUANCARO': '2',
+      'CARO': '2'
+    };
+    return mapVend[user] || ''; // '' significa Administrador / Sin restricción de cartera
+  }
+
+  // Helper para saber qué filtro de vendedor está aplicando la app
+  window.getVendedorFiltroActivo = function() {
+    // Si la empresa no es palaversich, no aplica filtro de vendedor
+    if (typeof currentCompanyKey !== 'undefined' && currentCompanyKey !== 'palaversich') return '';
+
+    // Si hay un selector de filtro en la pantalla de clientes y tiene un valor seleccionado
+    const selectFiltroGrid = document.getElementById("filtro-vendedor-clientes");
+    if (selectFiltroGrid && selectFiltroGrid.value !== undefined && selectFiltroGrid.value !== "") {
+      if (selectFiltroGrid.value === "TODOS") return '';
+      return selectFiltroGrid.value;
+    }
+
+    // Si no, tomar el vendedor asignado al usuario
+    return getVendedorAsignadoUsuario();
+  };
+
+  // Integración con Chat en Tiempo Real SG Montajes
+  window.getCurrentUser = function() {
+    if (window.CRMAuth && typeof window.CRMAuth.getAuthSession === "function") {
+      const sess = window.CRMAuth.getAuthSession();
+      if (sess && sess.username) {
+        return {
+          id: sess.username.toLowerCase(),
+          username: sess.username.toUpperCase(),
+          nombreCompleto: sess.nombre || sess.username,
+          empresa: sess.empresa || currentCompanyKey,
+          vendedor: sess.vendedor || '',
+          role: sess.role || (sess.vendedor ? `Vendedor ${sess.vendedor}` : 'Ventas'),
+          email: sess.email || (sess.username.toLowerCase() + '@empresa.com')
+        };
+      }
+    }
+    const cfg = getSystemConfig();
+    const u = (cfg.usuario || "JUANLUIS").trim();
+    const nombre = (cfg.nombreOperador || u).trim();
+    const vendNum = getVendedorAsignadoUsuario();
+    return {
+      id: u.toLowerCase(),
+      username: u.toUpperCase(),
+      nombreCompleto: nombre,
+      empresa: currentCompanyKey,
+      vendedor: vendNum,
+      role: vendNum ? `Vendedor ${vendNum}` : (['JUANLUIS', 'MELANI', 'ADMIN'].includes(u.toUpperCase()) ? 'Administración' : 'Ventas'),
+      email: u.toLowerCase() + '@empresa.com'
+    };
+  };
 
   function getEmpresaConfigOverride(empresaKey) {
     const sysCfg = getSystemConfig();
     return (sysCfg.empresas && sysCfg.empresas[empresaKey]) ? sysCfg.empresas[empresaKey] : {};
   }
 
+  // Descuento / Dto. % configurable por el usuario o empresa
+  function getDefaultDto() {
+    const overrides = getEmpresaConfigOverride(currentCompanyKey);
+    if (overrides.dtoDefault !== undefined && overrides.dtoDefault !== "") {
+      const val = parseFloat(overrides.dtoDefault);
+      return !isNaN(val) ? val.toFixed(2) : "0.00";
+    }
+    const sysCfg = getSystemConfig();
+    if (sysCfg.dtoDefault !== undefined && sysCfg.dtoDefault !== "") {
+      const val = parseFloat(sysCfg.dtoDefault);
+      return !isNaN(val) ? val.toFixed(2) : "0.00";
+    }
+    return "0.00";
+  }
+
   function actualizarUIUsuario() {
-    const user = getUsuarioActivo();
+    const sess = (window.CRMAuth && typeof window.CRMAuth.getAuthSession === "function") ? window.CRMAuth.getAuthSession() : null;
+    const user = sess ? sess.username : getUsuarioActivo();
+    const vendNum = sess ? sess.vendedor : getVendedorAsignadoUsuario();
     const headerUserEl = document.getElementById("header-user-name");
     if (headerUserEl) {
-      headerUserEl.textContent = user.toUpperCase();
+      if (sess && sess.empresa === 'palaversich' && vendNum) {
+        headerUserEl.innerHTML = `<span style="font-weight: 800;">${user.toUpperCase()}</span> <span style="font-size: 11px; color: var(--warning); opacity: 0.95;">(VEND. ${vendNum})</span>`;
+      } else if (sess && sess.empresa === 'pasina') {
+        headerUserEl.innerHTML = `<span style="font-weight: 800;">${user.toUpperCase()}</span> <span style="font-size: 11px; color: #38bdf8; opacity: 0.95;">(PASINA)</span>`;
+      } else if (vendNum) {
+        headerUserEl.textContent = `${user.toUpperCase()} (VEND. ${vendNum})`;
+      } else {
+        headerUserEl.textContent = user.toUpperCase();
+      }
+    }
+    if (window.SGChat && typeof window.SGChat.setUser === 'function') {
+      window.SGChat.setUser(window.getCurrentUser());
     }
   }
 
-  // Domicilios de Entrega Presea ERP (domi_entrega_pasina.DBI)
+  // Domicilios de Entrega Presea ERP (domi_entrega_pasina.DBI y domiciliopala.DBI)
   function getDomiciliosEntregaCliente(clienteCodigo) {
-    if (!window.DOMICILIOS_ENTREGA_PASINA) return [];
     const raw = String(clienteCodigo || "").trim();
     const clean = raw.replace(/^0+/, '');
-    return window.DOMICILIOS_ENTREGA_PASINA[raw] || 
-           window.DOMICILIOS_ENTREGA_PASINA[clean] || 
-           (parseInt(raw, 10) ? window.DOMICILIOS_ENTREGA_PASINA[String(parseInt(raw, 10))] : null) || 
-           [];
+
+    // Si la empresa activa es Palaversich, buscar en base domiciliopala
+    if (currentCompanyKey === 'palaversich' && window.DOMICILIOS_ENTREGA_PALAVERSICH) {
+      const domisPala = window.DOMICILIOS_ENTREGA_PALAVERSICH[raw] || 
+                        window.DOMICILIOS_ENTREGA_PALAVERSICH[clean] || 
+                        (parseInt(raw, 10) ? window.DOMICILIOS_ENTREGA_PALAVERSICH[String(parseInt(raw, 10))] : null) || 
+                        [];
+      if (domisPala.length > 0) return domisPala;
+    }
+
+    if (window.DOMICILIOS_ENTREGA_PASINA) {
+      return window.DOMICILIOS_ENTREGA_PASINA[raw] || 
+             window.DOMICILIOS_ENTREGA_PASINA[clean] || 
+             (parseInt(raw, 10) ? window.DOMICILIOS_ENTREGA_PASINA[String(parseInt(raw, 10))] : null) || 
+             [];
+    }
+    return [];
   }
 
   // Inicializar UI con usuario configurado
@@ -185,6 +317,17 @@ document.addEventListener("DOMContentLoaded", () => {
     headerCompanyName.textContent = currentCompany.nombre;
     headerCompanySub.textContent = currentCompany.subtitulo;
 
+    // Actualizar Logo y Gota de Agua en el Comprobante Oficial
+    const printLogo = document.getElementById("presea-print-logo-img");
+    if (printLogo && currentCompany.logoImg) {
+      printLogo.src = currentCompany.logoImg;
+      printLogo.alt = currentCompany.nombreCorto;
+    }
+    const watermark = document.getElementById("presea-watermark-img");
+    if (watermark && currentCompany.logoImg) {
+      watermark.src = currentCompany.logoImg;
+    }
+
     // Badges en tarjetas
     badgeActiveEmpresa.textContent = currentCompany.nombreCorto;
     badgeActiveEmpresa.style.borderColor = currentCompany.color;
@@ -291,14 +434,63 @@ document.addEventListener("DOMContentLoaded", () => {
     clienteSaldoVal.textContent = `$ ${currentCompany.saldoDefault}`;
     clienteCreditoVal.textContent = `$ 0.00`;
 
+    // Descuento / Dto. % por defecto
+    if (prodBonif) prodBonif.value = getDefaultDto();
+
     // Recalcular correlativo / folio de la Nota de Venta
     updateNextFolio();
 
-    // Actualizar estadísticas de cabecera con tablas Presea
+    // Configurar Selector de Cartera de Vendedores (Exclusivo PALAVERSICH)
+    const wrapFiltroVendedor = document.getElementById("wrapper-filtro-vendedor");
+    const selectFiltroVendedor = document.getElementById("filtro-vendedor-clientes");
+    if (wrapFiltroVendedor) {
+      if (key === 'palaversich') {
+        wrapFiltroVendedor.style.display = "flex";
+        if (selectFiltroVendedor) {
+          const vendAsignado = getVendedorAsignadoUsuario();
+          const isAdmin = !vendAsignado || ['JUANLUIS', 'MELANI', 'ADMIN'].includes(getUsuarioActivo().toUpperCase());
+
+          let optHtml = '';
+          if (isAdmin) {
+            optHtml += `<option value="TODOS">TODOS LOS VENDEDORES (Admin - 7.545 clie.)</option>`;
+          }
+          optHtml += `
+            <option value="1">VENDEDOR 1 — ROMERO, SEBASTIAN (186 clie.)</option>
+            <option value="2">VENDEDOR 2 — BATO / CARO (270 clie.)</option>
+            <option value="3">VENDEDOR 3 — DIAZ, MARTIN (332 clie.)</option>
+            <option value="4">VENDEDOR 4 — ILARRAZ, CARLOS (2.346 clie.)</option>
+            <option value="5">VENDEDOR 5 — BATO, FERNANDO (107 clie.)</option>
+            <option value="6">VENDEDOR 6 — GALLARDO, PABLO (294 clie.)</option>
+            <option value="7">VENDEDOR 7 — BATO, FERNANDO (626 clie.)</option>
+            <option value="8">VENDEDOR 8 — MONTIEL, EDUARDO (306 clie.)</option>
+            <option value="9">VENDEDOR 9 — MONTIEL / CARO (102 clie.)</option>
+            <option value="10">VENDEDOR 10 — MAGGIO, JOSE IGNACIO (509 clie.)</option>
+            <option value="11">VENDEDOR 11 — SALEMI, BRUNO (751 clie.)</option>
+            <option value="12">VENDEDOR 12 — ILLIA, JUAN CRUZ (1.146 clie.)</option>
+            <option value="13">VENDEDOR 13 — MOLINA, EMANUEL (557 clie.)</option>
+          `;
+          selectFiltroVendedor.innerHTML = optHtml;
+
+          if (vendAsignado) {
+            selectFiltroVendedor.value = vendAsignado;
+            selectFiltroVendedor.disabled = !isAdmin;
+          } else {
+            selectFiltroVendedor.value = "TODOS";
+            selectFiltroVendedor.disabled = false;
+          }
+        }
+      } else {
+        wrapFiltroVendedor.style.display = "none";
+      }
+    }
+
+    // Actualizar estadísticas de cabecera con tablas Presea si el elemento existe
     const clientesList = window.getClientesPorEmpresa(currentCompanyKey);
     const prodsList = window.getProductosPorEmpresa(currentCompanyKey);
     const tablaClie = currentCompany.tablasPresea ? currentCompany.tablasPresea.clientes : "CLIENTES";
-    headerStats.textContent = `${clientesList.length.toLocaleString()} Clientes (${tablaClie}) • ${prodsList.length.toLocaleString()} Artículos • Presea ERP`;
+    if (headerStats) {
+      headerStats.textContent = `${clientesList.length.toLocaleString()} Clientes (${tablaClie}) • ${prodsList.length.toLocaleString()} Artículos • Presea ERP`;
+    }
 
     // Limpiar selección actual si no pertenece
     limpiarFormulario(false);
@@ -312,8 +504,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Listener del Selector de Empresa
+  // Listener del Selector de Empresa (Solo para administradores)
   companySelect.addEventListener("change", (e) => {
+    const sess = (window.CRMAuth && typeof window.CRMAuth.getAuthSession === "function") ? window.CRMAuth.getAuthSession() : null;
+    if (sess && sess.empresa && sess.empresa !== 'admin') {
+      setEmpresaActiva(sess.empresa);
+      return;
+    }
     setEmpresaActiva(e.target.value);
   });
 
@@ -513,6 +710,13 @@ document.addEventListener("DOMContentLoaded", () => {
       inputTransporte1.value = `${cliente.transporte || ''} - ${cliente.transporte_nombre}`;
     }
 
+    // Autocompletar vendedor asignado al cliente
+    if (cliente.nom_vende && cliente.nom_vende.trim()) {
+      inputVendedor.value = cliente.nom_vende.trim();
+    } else if (cliente.vendedor && cliente.vendedor.trim()) {
+      inputVendedor.value = cliente.vendedor.trim();
+    }
+
     // Domicilio de Entrega desde domi_entrega_pasina.DBI
     const domisEntrega = getDomiciliosEntregaCliente(cliente.codigo);
     const datalistDomi = document.getElementById("lista-domi-entrega");
@@ -656,7 +860,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     prodPrecio.value = basePrice > 0 ? basePrice.toFixed(dec) : "0.00";
     prodCantidad.value = 1;
-    prodBonif.value = "0.00";
+    prodBonif.value = getDefaultDto();
     prodCantidad.focus();
   }
 
@@ -767,7 +971,7 @@ document.addEventListener("DOMContentLoaded", () => {
     prodStockDisp.value = "";
     prodPrecio.value = "";
     prodCantidad.value = 1;
-    prodBonif.value = "0.00";
+    prodBonif.value = getDefaultDto();
     inputBuscarProducto.focus();
   });
 
@@ -784,7 +988,7 @@ document.addEventListener("DOMContentLoaded", () => {
     prodStockDisp.value = "";
     prodPrecio.value = "";
     prodCantidad.value = 1;
-    prodBonif.value = "0.00";
+    prodBonif.value = getDefaultDto();
     renderItemsTable();
     inputBuscarProducto.focus();
   };
@@ -1231,9 +1435,27 @@ document.addEventListener("DOMContentLoaded", () => {
         : "Sin observaciones registradas.";
     }
 
-    // Totales
-    document.getElementById("presea-subtotal-val").textContent = orden.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById("presea-neto-val").textContent = orden.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // Totales y Descuentos calculados
+    const items = orden.items || [];
+    const totalBruto = items.reduce((acc, it) => acc + (Number(it.cantidad || 0) * Number(it.precio || 0)), 0);
+    const totalNeto = orden.subtotal !== undefined ? orden.subtotal : items.reduce((acc, it) => acc + Number(it.subtotal || 0), 0);
+    const totalDescuento = Math.max(0, totalBruto - totalNeto);
+    const pctDescuento = totalBruto > 0 ? ((totalDescuento / totalBruto) * 100) : 0.0;
+
+    const bonifPctEl = document.getElementById("presea-bonif-pct");
+    if (bonifPctEl) bonifPctEl.textContent = `${pctDescuento.toFixed(2)} %`;
+
+    const bonifValEl = document.getElementById("presea-bonif-val");
+    if (bonifValEl) bonifValEl.textContent = totalDescuento.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const box2DescEl = document.getElementById("presea-box2-desc");
+    if (box2DescEl) box2DescEl.textContent = `${pctDescuento.toFixed(2)}%`;
+
+    const box2DtoEl = document.getElementById("presea-box2-dto");
+    if (box2DtoEl) box2DtoEl.textContent = totalDescuento.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    document.getElementById("presea-subtotal-val").textContent = totalBruto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById("presea-neto-val").textContent = totalNeto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     document.getElementById("presea-iva-val").textContent = orden.iva.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     
     const totalCurrEl = document.getElementById("presea-total-curr");
@@ -1407,7 +1629,11 @@ document.addEventListener("DOMContentLoaded", () => {
             color: #ffffff !important;
           }
           .voucher-watermark {
-            opacity: 0.08 !important;
+            opacity: 0.16 !important;
+            z-index: 5 !important;
+            mix-blend-mode: multiply !important;
+            display: flex !important;
+            position: absolute !important;
           }
         </style>
       </head>
@@ -1471,7 +1697,7 @@ document.addEventListener("DOMContentLoaded", () => {
     prodStockDisp.value = "";
     prodPrecio.value = "";
     prodCantidad.value = 1;
-    prodBonif.value = "0.00";
+    prodBonif.value = getDefaultDto();
 
     renderItemsTable();
     recalcularTotales();
@@ -1568,13 +1794,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const prodsList = window.getProductosPorEmpresa(currentCompanyKey);
     const tbody = document.getElementById("tabla-catalogo-body");
     const filtro = (document.getElementById("filtro-catalogo").value || "").toLowerCase().trim();
+    const badgeTotal = document.getElementById("badge-total-productos-filtrados");
 
     const filtered = prodsList.filter(p => 
       !filtro ||
       (p.detalle && p.detalle.toLowerCase().includes(filtro)) ||
       (p.codigo && String(p.codigo).toLowerCase().includes(filtro)) ||
       (p.rubro && p.rubro.toLowerCase().includes(filtro))
-    ).slice(0, 50);
+    );
+
+    if (badgeTotal) {
+      badgeTotal.textContent = `${filtered.length.toLocaleString()} productos`;
+    }
 
     const isUSD = (currentCompany.monedaDefault === "2");
     const currSign = isUSD ? "u$s" : "$";
@@ -1599,20 +1830,33 @@ document.addEventListener("DOMContentLoaded", () => {
     const clientesList = window.getClientesPorEmpresa(currentCompanyKey);
     const tbody = document.getElementById("tabla-clientes-body");
     const filtro = (document.getElementById("filtro-clientes-maestro").value || "").toLowerCase().trim();
+    const badgeTotal = document.getElementById("badge-total-clientes-filtrados");
 
     const filtered = clientesList.filter(c => 
       !filtro ||
       (c.nombre && c.nombre.toLowerCase().includes(filtro)) ||
       (c.codigo && String(c.codigo).includes(filtro)) ||
       (c.cuit && String(c.cuit).includes(filtro)) ||
-      (c.localidad && c.localidad.toLowerCase().includes(filtro))
-    ).slice(0, 50);
+      (c.localidad && c.localidad.toLowerCase().includes(filtro)) ||
+      (c.vendedor && String(c.vendedor).includes(filtro)) ||
+      (c.nom_vende && c.nom_vende.toLowerCase().includes(filtro))
+    );
+
+    if (badgeTotal) {
+      badgeTotal.textContent = `${filtered.length.toLocaleString()} clientes`;
+    }
 
     tbody.innerHTML = filtered.map(c => `
       <tr>
         <td><strong style="color: #38bdf8; font-family: monospace;">${c.codigo}</strong></td>
         <td><strong style="color: #f1f5f9;">${c.nombre}</strong></td>
         <td style="font-family: monospace;">${c.cuit || 'S/D'}</td>
+        <td>
+          ${(currentCompanyKey === 'palaversich')
+            ? `<span class="badge-vendedor" title="${c.nom_vende || ''}">Vend. ${c.vendedor || '-'}${c.nom_vende ? ` • ${c.nom_vende}` : ''}</span>`
+            : `<span style="color: #64748b; font-size: 12px;">${c.vendedor ? `Vend. ${c.vendedor}` : 'Casa Central'}</span>`
+          }
+        </td>
         <td>${c.localidad || '-'}</td>
         <td style="font-size: 12px; color: #94a3b8;">${c.domicilio || '-'}</td>
         <td>${c.telefono || '-'}</td>
@@ -1621,6 +1865,19 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   document.getElementById("filtro-clientes-maestro").addEventListener("input", renderClientesMaestro);
+
+  const selectFiltroGrid = document.getElementById("filtro-vendedor-clientes");
+  if (selectFiltroGrid) {
+    selectFiltroGrid.addEventListener("change", () => {
+      renderClientesMaestro();
+      // Actualizar estadísticas de clientes en header
+      const clientesList = window.getClientesPorEmpresa(currentCompanyKey);
+      const prodsList = window.getProductosPorEmpresa(currentCompanyKey);
+      if (headerStats) {
+        headerStats.textContent = `${clientesList.length.toLocaleString()} Clientes (${tablaClie}) • ${prodsList.length.toLocaleString()} Artículos • Presea ERP`;
+      }
+    });
+  }
 
   // ==========================================================================
   // 12. ATAJO F6: SELECTOR MODAL CONTEXTUAL DE CLIENTES Y ARTÍCULOS
@@ -1684,7 +1941,7 @@ document.addEventListener("DOMContentLoaded", () => {
       (c.codigo && String(c.codigo).includes(q)) ||
       (c.cuit && String(c.cuit).includes(q)) ||
       (c.localidad && c.localidad.toLowerCase().includes(q))
-    ).slice(0, 30);
+    ).slice(0, 250);
 
     if (filtered.length === 0) {
       tablaF6ClientesBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 25px; color: var(--text-muted);">Sin clientes coincidentes en ${currentCompany.nombreCorto}</td></tr>`;
@@ -1759,7 +2016,7 @@ document.addEventListener("DOMContentLoaded", () => {
       (p.detalle && p.detalle.toLowerCase().includes(q)) ||
       (p.codigo && String(p.codigo).toLowerCase().includes(q)) ||
       (p.rubro && p.rubro.toLowerCase().includes(q))
-    ).slice(0, 30);
+    ).slice(0, 250);
 
     if (filtered.length === 0) {
       tablaF6ProductosBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 25px; color: var(--text-muted);">Sin artículos coincidentes</td></tr>`;
@@ -1850,19 +2107,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const cfg = getSystemConfig();
     const userInp = document.getElementById("cfg-user-name");
     const fullnameInp = document.getElementById("cfg-user-fullname");
+    const vendNumInp = document.getElementById("cfg-vendedor-numero");
     if (userInp) userInp.value = getUsuarioActivo();
     if (fullnameInp) fullnameInp.value = cfg.nombreOperador || "";
+    if (vendNumInp) vendNumInp.value = cfg.vendedorNumero !== undefined ? cfg.vendedorNumero : getVendedorAsignadoUsuario();
 
     const overrides = getEmpresaConfigOverride(currentCompanyKey);
     const vendInp = document.getElementById("cfg-vendedor-default");
     const depInp = document.getElementById("cfg-deposito-default");
     const prefInp = document.getElementById("cfg-prefijo-folio");
     const obsInp = document.getElementById("cfg-obs-default");
+    const dtoInp = document.getElementById("cfg-dto-default");
 
     if (vendInp) vendInp.value = overrides.vendedorDefault !== undefined ? overrides.vendedorDefault : currentCompany.vendedorDefault;
     if (depInp) depInp.value = overrides.depositoDefault !== undefined ? overrides.depositoDefault : currentCompany.depositoDefault;
     if (prefInp) prefInp.value = overrides.prefijoFolio !== undefined ? overrides.prefijoFolio : (currentCompany.prefijoFolio || "");
     if (obsInp) obsInp.value = overrides.observacionesDefault !== undefined ? overrides.observacionesDefault : "";
+    if (dtoInp) dtoInp.value = overrides.dtoDefault !== undefined ? overrides.dtoDefault : (cfg.dtoDefault !== undefined ? cfg.dtoDefault : "0.00");
 
     const cfgEmpLabel = document.getElementById("cfg-empresa-nombre-label");
     if (cfgEmpLabel) cfgEmpLabel.textContent = currentCompany.nombreCorto;
@@ -1881,6 +2142,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btnGuardarConfig.addEventListener("click", () => {
       const userInp = document.getElementById("cfg-user-name");
       const fullnameInp = document.getElementById("cfg-user-fullname");
+      const vendNumInp = document.getElementById("cfg-vendedor-numero");
       const nuevoUsuario = userInp ? userInp.value.trim().toUpperCase() : "JUANLUIS";
 
       if (!nuevoUsuario) {
@@ -1893,17 +2155,24 @@ document.addEventListener("DOMContentLoaded", () => {
       const depInp = document.getElementById("cfg-deposito-default");
       const prefInp = document.getElementById("cfg-prefijo-folio");
       const obsInp = document.getElementById("cfg-obs-default");
+      const dtoInp = document.getElementById("cfg-dto-default");
 
       const cfg = getSystemConfig();
       cfg.usuario = nuevoUsuario;
       cfg.nombreOperador = fullnameInp ? fullnameInp.value.trim() : "";
+      cfg.vendedorNumero = vendNumInp ? vendNumInp.value.trim() : "";
+      if (dtoInp) {
+        const dVal = parseFloat(dtoInp.value) || 0.0;
+        cfg.dtoDefault = dVal.toFixed(2);
+      }
 
       if (!cfg.empresas) cfg.empresas = {};
       cfg.empresas[currentCompanyKey] = {
         vendedorDefault: vendInp ? vendInp.value.trim() : currentCompany.vendedorDefault,
         depositoDefault: depInp ? depInp.value.trim() : currentCompany.depositoDefault,
         prefijoFolio: prefInp ? prefInp.value.trim() : (currentCompany.prefijoFolio || ""),
-        observacionesDefault: obsInp ? obsInp.value.trim() : ""
+        observacionesDefault: obsInp ? obsInp.value.trim() : "",
+        dtoDefault: dtoInp ? (parseFloat(dtoInp.value) || 0.0).toFixed(2) : "0.00"
       };
 
       saveSystemConfig(cfg);
@@ -1911,6 +2180,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Aplicar de inmediato a la empresa activa y recalcular folio
       setEmpresaActiva(currentCompanyKey);
+      if (prodBonif) prodBonif.value = getDefaultDto();
 
       // Mostrar confirmación
       const statusMsg = document.getElementById("config-status-msg");
@@ -1932,6 +2202,7 @@ document.addEventListener("DOMContentLoaded", () => {
         actualizarUIUsuario();
         cargarFormularioConfiguracion();
         setEmpresaActiva(currentCompanyKey);
+        if (prodBonif) prodBonif.value = getDefaultDto();
         alert("Valores restablecidos a los parámetros originales.");
       }
     });
@@ -1941,10 +2212,15 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".btn-quick-user").forEach(btn => {
     btn.addEventListener("click", () => {
       const u = btn.dataset.user;
+      const v = btn.dataset.vend;
       const userInp = document.getElementById("cfg-user-name");
+      const vendNumInp = document.getElementById("cfg-vendedor-numero");
       if (userInp) {
         userInp.value = u;
         userInp.focus();
+      }
+      if (vendNumInp && v !== undefined) {
+        vendNumInp.value = v;
       }
     });
   });
@@ -1970,6 +2246,32 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Inicializar en Palaversich
-  setEmpresaActiva("palaversich");
+  // Exponer setEmpresaActiva a nivel global para auth_system
+  window.setEmpresaActivaGlobal = function(key) {
+    setEmpresaActiva(key);
+  };
+
+  // Inicialización de empresa y sesión
+  const authSession = (window.CRMAuth && typeof window.CRMAuth.getAuthSession === "function") 
+    ? window.CRMAuth.getAuthSession() 
+    : null;
+
+  if (authSession && authSession.empresa) {
+    if (authSession.empresa === "palaversich") {
+      setEmpresaActiva("palaversich");
+    } else if (authSession.empresa === "pasina") {
+      setEmpresaActiva("pasina");
+    } else {
+      setEmpresaActiva("palaversich");
+    }
+    if (window.CRMAuth && typeof window.CRMAuth.aplicarAislamientoEmpresa === "function") {
+      window.CRMAuth.aplicarAislamientoEmpresa(authSession);
+    }
+  } else {
+    // Si no hay sesión, inicializar en Palaversich y mostrar modal de login
+    setEmpresaActiva("palaversich");
+    if (window.CRMAuth && typeof window.CRMAuth.mostrarPantallaLogin === "function") {
+      window.CRMAuth.mostrarPantallaLogin();
+    }
+  }
 });

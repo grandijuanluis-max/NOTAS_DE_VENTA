@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light">
-  <title>CRM • Gestión Multi-Empresa de Notas de Venta</title>
+  <title>Ingreso de Nota de Venta • Presea ERP</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
@@ -35,7 +35,7 @@
 
     <nav class="nav-tabs">
       <button class="nav-tab active" data-tab="tab-nueva-nv">
-        <i class="fa-solid fa-file-pen"></i> <span>Nueva Nota de Venta</span>
+        <i class="fa-solid fa-file-pen"></i> <span>Ingreso de Nota de Venta</span>
       </button>
       <button class="nav-tab" data-tab="tab-historial">
         <i class="fa-solid fa-clock-rotate-left"></i> <span>Historial de Pedidos</span>
@@ -52,15 +52,35 @@
     </nav>
 
     <div class="header-status">
+      <!-- Indicador de usuarios conectados en tiempo real (Chat SG Montajes) -->
+      <div id="online-users-pill" class="online-users-pill" style="display: none;" title="Ver usuarios conectados">
+        <span class="online-pulse-dot"></span>
+        <span id="online-users-count">1 en línea</span>
+        <i class="fas fa-chevron-down" style="font-size: 10px; opacity: 0.8;"></i>
+      </div>
+      <!-- Dropdown de Usuarios Conectados -->
+      <div id="online-users-dropdown" class="online-users-dropdown" style="display: none;">
+        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 8px;">
+          <span style="font-size: 13px; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-users" style="color: #38bdf8;"></i> Usuarios del Sistema
+          </span>
+          <button type="button" onclick="window.SGChat && window.SGChat.openChat()" style="background: rgba(37,99,235,0.25); border: 1px solid #2563eb; color: #93c5fd; font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer;">
+            Abrir Chat
+          </button>
+        </div>
+        <div id="online-users-dropdown-list">
+          <!-- Filas dinámicas de usuarios conectados y desconectados -->
+        </div>
+      </div>
+
       <div class="user-pill-tag user-pill-interactive" id="btn-header-user" title="Haga clic para cambiar o configurar el usuario activo" style="cursor: pointer;">
         <i class="fa-solid fa-user-tie"></i>
         <span id="header-user-name">JUANLUIS</span>
         <i class="fa-solid fa-gear" style="font-size: 10px; margin-left: 4px; opacity: 0.85;"></i>
-      </div>
-      <div class="status-badge">
-        <span class="status-dot"></span>
-        <span id="header-db-stats">Cargando base de datos...</span>
-      </div>
+      <button type="button" class="btn-logout" id="btn-header-logout" title="Cerrar sesión activa" onclick="window.CRMAuth && window.CRMAuth.cerrarSesionUsuario()">
+        <i class="fa-solid fa-right-from-bracket"></i>
+        <span>Salir</span>
+      </button>
     </div>
   </header>
 
@@ -73,7 +93,7 @@
         <div class="card-title">
           <div style="display: flex; align-items: center; gap: 10px;">
             <i class="fa-solid fa-file-invoice" style="color: var(--warning); font-size: 18px;"></i>
-            <span id="label-paso-1">Paso 1: Información General y Cliente</span>
+            <span id="label-paso-1">Paso 1: Ingreso de Nota de Venta • Cliente y Datos Principales</span>
             <span class="badge-empresa-pill" id="badge-active-empresa">PALAVERSICH</span>
           </div>
           <span style="font-size: 13.5px; font-weight: normal; color: var(--text-secondary);" id="order-folio">
@@ -167,8 +187,8 @@
         <!-- Fila 4: Domicilios y Estado de Cuenta Crediticia -->
         <div class="grid-3">
           <div class="form-group">
-            <label class="form-label">Domicilio del Cliente (Maestro)</label>
-            <input type="text" id="cliente-direccion" class="form-control" placeholder="Domicilio oficial del maestro de clientes...">
+            <label class="form-label">Domicilio del Cliente</label>
+            <input type="text" id="cliente-direccion" class="form-control" placeholder="Domicilio del cliente...">
           </div>
           <div class="form-group">
             <label class="form-label" id="label-domicilio-entrega">Domicilio de Entrega</label>
@@ -318,7 +338,7 @@
             <input type="number" id="prod-cantidad" class="form-control" value="1" min="0.01" step="any">
           </div>
           <div class="form-group" style="margin-bottom: 0; width: 100px;">
-            <label class="form-label">Bonif. %</label>
+            <label class="form-label">Dto. %</label>
             <input type="number" id="prod-bonif" class="form-control" value="0.00" min="0" max="100" step="0.01">
           </div>
           <div style="display: flex; gap: 6px; align-items: flex-end;">
@@ -341,7 +361,7 @@
                 <th style="width: 130px;">Rubro</th>
                 <th style="width: 90px; text-align: center;">Cantidad</th>
                 <th style="width: 130px; text-align: right;" id="th-precio-header">Precio Unit.</th>
-                <th style="width: 90px; text-align: center;">Bonif. %</th>
+                <th style="width: 90px; text-align: center;">Dto. %</th>
                 <th style="width: 140px; text-align: right;" id="th-subtotal-header">Subtotal</th>
                 <th style="width: 95px; text-align: center;">Acciones</th>
               </tr>
@@ -437,6 +457,7 @@
           <div style="display: flex; align-items: center; gap: 10px;">
             <i class="fa-solid fa-boxes-stacked" style="color: var(--warning); font-size: 18px;"></i>
             <span>Catálogo de Productos y Stock Presea</span>
+            <span id="badge-total-productos-filtrados" class="badge-empresa-pill" style="font-size: 11px; padding: 2px 8px;">0 productos</span>
           </div>
           <input type="text" id="filtro-catalogo" class="form-control" placeholder="Filtrar por descripción, código o rubro..." style="width: 300px;">
         </div>
@@ -464,24 +485,36 @@
     <!-- PESTAÑA 4: PADRÓN DE CLIENTES -->
     <section id="tab-clientes" class="tab-pane">
       <div class="card">
-        <div class="card-title">
+        <div class="card-title" style="flex-wrap: wrap; gap: 12px;">
           <div style="display: flex; align-items: center; gap: 10px;">
             <i class="fa-solid fa-users" style="color: var(--warning); font-size: 18px;"></i>
             <span>Padrón de Clientes Registrados</span>
+            <span id="badge-total-clientes-filtrados" class="badge-empresa-pill" style="font-size: 11px; padding: 2px 8px;">0 clientes</span>
           </div>
-          <input type="text" id="filtro-clientes-maestro" class="form-control" placeholder="Buscar por nombre, código o CUIT..." style="width: 320px;">
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div id="wrapper-filtro-vendedor" style="display: flex; align-items: center; gap: 6px;">
+              <label for="filtro-vendedor-clientes" style="font-size: 11.5px; font-weight: 700; color: #94a3b8; white-space: nowrap;">
+                <i class="fa-solid fa-user-tag" style="color: var(--warning);"></i> Cartera Vendedor:
+              </label>
+              <select id="filtro-vendedor-clientes" class="form-control" style="width: 280px; font-size: 12px; padding: 5px 10px;">
+                <!-- Opciones dinámicas de vendedores de Palaversich -->
+              </select>
+            </div>
+            <input type="text" id="filtro-clientes-maestro" class="form-control" placeholder="Buscar por nombre, código o CUIT..." style="width: 260px;">
+          </div>
         </div>
 
         <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
           <table class="custom-table" id="tabla-clientes-maestro">
             <thead>
               <tr>
-                <th style="width: 90px;">Código</th>
+                <th style="width: 85px;">Código</th>
                 <th>Razón Social / Nombre</th>
-                <th style="width: 140px;">CUIT</th>
-                <th style="width: 160px;">Localidad</th>
+                <th style="width: 130px;">CUIT</th>
+                <th style="width: 180px;">Vendedor Asignado</th>
+                <th style="width: 140px;">Localidad</th>
                 <th>Dirección</th>
-                <th style="width: 130px;">Teléfono</th>
+                <th style="width: 120px;">Teléfono</th>
               </tr>
             </thead>
             <tbody id="tabla-clientes-body">
@@ -525,13 +558,41 @@
               <input type="text" id="cfg-user-fullname" class="form-control" placeholder="Ej: Melani Grandi / Juan Luis Pérez">
             </div>
 
-            <div style="margin-top: 16px;">
-              <label class="form-label" style="font-size: 11px; color: #64748b; margin-bottom: 8px;">Cambio Rápido de Usuario:</label>
-              <div style="display: flex; flex-wrap: wrap; gap: 8px;" id="cfg-quick-users-list">
-                <button type="button" class="btn btn-outline btn-sm btn-quick-user" data-user="JUANLUIS">JUANLUIS</button>
-                <button type="button" class="btn btn-outline btn-sm btn-quick-user" data-user="MGRANDI">MGRANDI</button>
-                <button type="button" class="btn btn-outline btn-sm btn-quick-user" data-user="CARLOS">CARLOS</button>
-                <button type="button" class="btn btn-outline btn-sm btn-quick-user" data-user="ADMIN">ADMIN</button>
+            <div id="cfg-group-vendedor-palaversich">
+              <div class="form-group" style="margin-bottom: 14px;">
+                <label class="form-label">Cartera Asignada / N° de Vendedor (Palaversich)</label>
+                <select id="cfg-vendedor-numero" class="form-control" style="font-size: 13px;">
+                  <option value="">TODOS / ADMINISTRADOR (Sin restricción de cartera)</option>
+                  <option value="1">VENDEDOR 1 — ROMERO, SEBASTIAN (186 clientes)</option>
+                  <option value="2">VENDEDOR 2 — BATO, FERNANDO / CARO, JUAN (270 clientes)</option>
+                  <option value="3">VENDEDOR 3 — DIAZ, MARTIN (332 clientes)</option>
+                  <option value="4">VENDEDOR 4 — ILARRAZ, CARLOS (2.346 clientes)</option>
+                  <option value="5">VENDEDOR 5 — BATO, FERNANDO (107 clientes)</option>
+                  <option value="6">VENDEDOR 6 — GALLARDO, PABLO (294 clientes)</option>
+                  <option value="7">VENDEDOR 7 — BATO, FERNANDO (626 clientes)</option>
+                  <option value="8">VENDEDOR 8 — MONTIEL, EDUARDO (306 clientes)</option>
+                  <option value="9">VENDEDOR 9 — MONTIEL / CARO (102 clientes)</option>
+                  <option value="10">VENDEDOR 10 — MAGGIO, JOSE IGNACIO (509 clientes)</option>
+                  <option value="11">VENDEDOR 11 — SALEMI, BRUNO (751 clientes)</option>
+                  <option value="12">VENDEDOR 12 — ILLIA, JUAN CRUZ (1.146 clientes)</option>
+                  <option value="13">VENDEDOR 13 — MOLINA, EMANUEL (557 clientes)</option>
+                </select>
+                <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
+                  En Palaversich, cada vendedor solo verá en la grilla y autocomplete a los clientes con su número asignado.
+                </small>
+              </div>
+
+              <div style="margin-top: 16px;">
+                <label class="form-label" style="font-size: 11px; color: #64748b; margin-bottom: 8px;">Cambio Rápido de Usuario / Vendedor:</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;" id="cfg-quick-users-list">
+                  <button type="button" class="btn btn-outline btn-sm btn-quick-user" data-user="JUANLUIS" data-vend="">JUANLUIS (Admin)</button>
+                  <button type="button" class="btn btn-outline btn-sm btn-quick-user" data-user="CARLOS" data-vend="4">CARLOS (Vend. 4)</button>
+                  <button type="button" class="btn btn-outline btn-sm btn-quick-user" data-user="FERNANDO" data-vend="7">FERNANDO (Vend. 7)</button>
+                  <button type="button" class="btn btn-outline btn-sm btn-quick-user" data-user="FERNANDO5" data-vend="5">VENDEDOR 5</button>
+                  <button type="button" class="btn btn-outline btn-sm btn-quick-user" data-user="JUANCRUZ" data-vend="12">JUAN CRUZ (Vend. 12)</button>
+                  <button type="button" class="btn btn-outline btn-sm btn-quick-user" data-user="BRUNO" data-vend="11">BRUNO (Vend. 11)</button>
+                  <button type="button" class="btn btn-outline btn-sm btn-quick-user" data-user="MOLINA" data-vend="13">EMANUEL (Vend. 13)</button>
+                </div>
               </div>
             </div>
           </div>
@@ -559,6 +620,14 @@
             <div class="form-group" style="margin-bottom: 14px;">
               <label class="form-label">Punto de Venta / Prefijo de Folio</label>
               <input type="text" id="cfg-prefijo-folio" class="form-control" placeholder="Ej: 7000 o 1001">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 14px;">
+              <label class="form-label">Descuento Predeterminado (Dto. % por Defecto)</label>
+              <input type="number" id="cfg-dto-default" class="form-control" value="0.00" min="0" max="100" step="0.01" placeholder="Ej: 0.00 o 5.00">
+              <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
+                Porcentaje de Dto. que se precarga automáticamente al cargar artículos en la Nota de Venta.
+              </small>
             </div>
 
             <div class="form-group">
@@ -731,7 +800,7 @@
               </div>
             </div>
 
-            <!-- Columna Derecha: Subtotal, Bonificación, Neto, IVA y Total Oficial -->
+            <!-- Columna Derecha: Subtotal, Descuento (Dto.), Neto, IVA y Total Oficial -->
             <div class="voucher-bottom-right">
               <div class="voucher-box voucher-totals-box">
                 <div class="voucher-calc-rows">
@@ -740,7 +809,7 @@
                     <strong class="v-calc-num" id="presea-subtotal-val">0.00</strong>
                   </div>
                   <div class="v-calc-row">
-                    <span class="v-calc-lbl">BONIFICACIÓN <span id="presea-bonif-pct" style="font-weight: 500; font-size: 11px;">8.00 %</span></span>
+                    <span class="v-calc-lbl">DESCUENTO (DTO) <span id="presea-bonif-pct" style="font-weight: 500; font-size: 11px;">0.00 %</span></span>
                     <strong class="v-calc-num" id="presea-bonif-val">0.00</strong>
                   </div>
                   <div class="v-calc-row">
@@ -849,12 +918,179 @@
     </div>
   </div>
 
+  <!-- ==================================================================== -->
+  <!-- WIDGET FLOTANTE: CHAT INTERNO EN TIEMPO REAL SG MONTAJES              -->
+  <!-- ==================================================================== -->
+  <div id="sg-chat-widget" class="sg-chat-widget" style="display: none;">
+    <!-- Botón flotante -->
+    <button type="button" id="sg-chat-toggle-btn" class="sg-chat-toggle-btn" onclick="window.SGChat && window.SGChat.toggleChat()" title="Abrir Chat Interno del Equipo">
+      <i class="fas fa-comments" style="font-size: 16px;"></i>
+      <span>Chat del Equipo</span>
+      <span id="sg-chat-unread-badge" class="chat-unread-badge" style="display: none;">0</span>
+    </button>
+
+    <!-- Ventana flotante de chat -->
+    <div id="sg-chat-window" class="sg-chat-window" style="display: none;">
+      <!-- Cabecera -->
+      <div class="sg-chat-header">
+        <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+          <button type="button" id="sg-chat-back-btn" class="sg-chat-icon-btn" onclick="window.SGChat && window.SGChat.showConversationsView()" title="Ver todos los chats y grupos" style="display: inline-flex;">
+            <i class="fas fa-arrow-left"></i>
+          </button>
+          <div style="overflow: hidden;">
+            <div id="sg-chat-title" style="font-size: 13.5px; font-weight: 800; color: #ffffff; display: flex; align-items: center; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
+              <i class="fa-solid fa-users" style="color: #38bdf8; margin-right: 6px;"></i> # General (Equipo)
+            </div>
+            <div id="sg-chat-subtitle" style="font-size: 10.5px; color: var(--text-muted); margin-top: 1px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
+              Conectados en tiempo real
+            </div>
+          </div>
+        </div>
+        <div class="sg-chat-header-actions">
+          <button type="button" id="sg-chat-list-toggle-btn" class="sg-chat-icon-btn" onclick="window.SGChat && window.SGChat.showConversationsView()" title="Chats, Grupos y Colegas" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8;">
+            <i class="fa-solid fa-users-viewfinder"></i>
+          </button>
+          <button type="button" class="sg-chat-icon-btn" onclick="window.SGChat && window.SGChat.toggleChat()" title="Minimizar"><i class="fas fa-minus"></i></button>
+          <button type="button" class="sg-chat-icon-btn" onclick="window.SGChat && window.SGChat.closeChat()" title="Cerrar"><i class="fas fa-times"></i></button>
+        </div>
+      </div>
+
+      <!-- Panel de Mensajes (Conversación Activa) -->
+      <div id="sg-chat-messages-pane" class="sg-chat-messages-pane">
+        <div id="sg-chat-messages-body" class="sg-chat-messages-body">
+          <!-- Mensajes dinámicos -->
+        </div>
+        <div id="sg-chat-typing-indicator" class="sg-chat-typing-indicator" style="display: none;"></div>
+      </div>
+
+      <!-- Panel de Lista de Conversaciones (General, Grupos y Directos) -->
+      <div id="sg-chat-contacts-pane" class="sg-chat-contacts-pane" style="display: none;">
+        <div id="sg-chat-contacts-list">
+          <!-- Lista dinámica de General, Grupos y Colegas -->
+        </div>
+      </div>
+
+      <!-- Panel de Creación de Grupo -->
+      <div id="sg-chat-create-group-pane" class="sg-chat-create-group-pane" style="display: none; flex: 1; flex-direction: column; overflow: hidden;">
+        <!-- Formulario dinámico para nuevo grupo -->
+      </div>
+
+      <!-- Pie de Chat: Input y Emojis (Siempre visible en vista de conversación) -->
+      <div id="sg-chat-footer" class="sg-chat-footer">
+        <div class="sg-chat-emojis-bar">
+          <button type="button" class="sg-emoji-btn" data-emoji="👍" title="Pulgar arriba" onclick="var inp = document.getElementById('sg-chat-input'); if(inp){ inp.value += '👍'; inp.focus(); }">👍</button>
+          <button type="button" class="sg-emoji-btn" data-emoji="✅" title="Aprobado / Listo" onclick="var inp = document.getElementById('sg-chat-input'); if(inp){ inp.value += '✅'; inp.focus(); }">✅</button>
+          <button type="button" class="sg-emoji-btn" data-emoji="⚠️" title="Atención" onclick="var inp = document.getElementById('sg-chat-input'); if(inp){ inp.value += '⚠️'; inp.focus(); }">⚠️</button>
+          <button type="button" class="sg-emoji-btn" data-emoji="👏" title="Aplausos" onclick="var inp = document.getElementById('sg-chat-input'); if(inp){ inp.value += '👏'; inp.focus(); }">👏</button>
+          <button type="button" class="sg-emoji-btn" data-emoji="🚀" title="En marcha" onclick="var inp = document.getElementById('sg-chat-input'); if(inp){ inp.value += '🚀'; inp.focus(); }">🚀</button>
+        </div>
+        <div class="sg-chat-input-row">
+          <input type="text" id="sg-chat-input" class="sg-chat-input" placeholder="Escribe un mensaje..." autocomplete="off" onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); window.SGChat && window.SGChat.triggerSend(); }">
+          <button type="button" id="sg-chat-send-btn" class="sg-chat-send-btn" title="Enviar mensaje" onclick="window.SGChat && window.SGChat.triggerSend()">
+            <i class="fas fa-paper-plane" style="font-size: 13px;"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANTALLA / MODAL DE LOGIN (ACCESO MULTI-EMPRESA CON AISLAMIENTO TOTAL) -->
+  <div id="modal-login" class="login-screen-overlay" style="display: none;">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="login-logo-circle">
+          <i class="fa-solid fa-file-invoice"></i>
+        </div>
+        <h2>INGRESO DE NOTA DE VENTA</h2>
+      </div>
+
+      <form id="form-login" class="login-form" onsubmit="event.preventDefault(); window.ejecutarLogin();">
+        <div id="login-error-alert" class="login-alert" style="display: none;">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <span id="login-error-text">Usuario o contraseña incorrectos.</span>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" style="font-size: 12px; font-weight: 700; color: #cbd5e1;">USUARIO</label>
+          <div class="login-input-wrapper">
+            <i class="fa-solid fa-user login-input-icon"></i>
+            <input type="text" id="login-username" class="form-control login-input" placeholder="Ej: CARLOS, MARCELO, JUANLUIS" autocomplete="username" required>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 22px;">
+          <label class="form-label" style="font-size: 12px; font-weight: 700; color: #cbd5e1;">CONTRASEÑA</label>
+          <div class="login-input-wrapper">
+            <i class="fa-solid fa-lock login-input-icon"></i>
+            <input type="password" id="login-password" class="form-control login-input" placeholder="Ingrese su contraseña" autocomplete="current-password" required>
+            <button type="button" class="btn-toggle-password" id="btn-toggle-password" title="Mostrar/ocultar contraseña" onclick="window.toggleLoginPasswordVisibility()">
+              <i class="fa-solid fa-eye" id="icon-eye-password"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" id="btn-login-submit" class="btn btn-primary login-btn-submit">
+          <span>INGRESAR AL SISTEMA</span>
+          <i class="fa-solid fa-arrow-right-to-bracket"></i>
+        </button>
+
+        <!-- Selector Rápido de Cuentas Demo -->
+        <div class="login-quick-section">
+          <div class="login-quick-header" onclick="window.toggleLoginQuickAccounts()">
+            <span><i class="fa-solid fa-users-gear"></i> Acceso Rápido / Cuentas de Demostración</span>
+            <i class="fa-solid fa-chevron-down" id="login-quick-chevron"></i>
+          </div>
+          <div id="login-quick-body" class="login-quick-body" style="display: none;">
+            <div class="login-quick-group">
+              <span class="login-quick-title" style="color: #10b981;">🏢 PALAVERSICH (Vendedores):</span>
+              <div class="login-quick-buttons">
+                <button type="button" class="btn-quick-login" onclick="window.loginRapido('CARLOS', '123')">CARLOS (Vend. 4)</button>
+                <button type="button" class="btn-quick-login" onclick="window.loginRapido('FERNANDO', '123')">FERNANDO (Vend. 7)</button>
+                <button type="button" class="btn-quick-login" onclick="window.loginRapido('FERNANDO5', '123')">VENDEDOR 5</button>
+                <button type="button" class="btn-quick-login" onclick="window.loginRapido('JUANCRUZ', '123')">JUAN CRUZ (Vend. 12)</button>
+                <button type="button" class="btn-quick-login" onclick="window.loginRapido('CAROLINA', '123')">CAROLINA (Ventas)</button>
+              </div>
+            </div>
+            <div class="login-quick-group" style="margin-top: 10px;">
+              <span class="login-quick-title" style="color: #38bdf8;">🏢 PASINA:</span>
+              <div class="login-quick-buttons">
+                <button type="button" class="btn-quick-login" onclick="window.loginRapido('MARCELO', '123')">MARCELO (Dirección)</button>
+                <button type="button" class="btn-quick-login" onclick="window.loginRapido('ADMBAHIA', '123')">ADMBAHIA (Admin)</button>
+                <button type="button" class="btn-quick-login" onclick="window.loginRapido('VENTASPASINA', '123')">VENTAS PASINA</button>
+              </div>
+            </div>
+            <div class="login-quick-group" style="margin-top: 10px;">
+              <span class="login-quick-title" style="color: #f3b229;">👑 ADMINISTRACIÓN CENTRAL (Acceso Total):</span>
+              <div class="login-quick-buttons">
+                <button type="button" class="btn-quick-login" onclick="window.loginRapido('MELANI', '123')">MELANI (Admin)</button>
+                <button type="button" class="btn-quick-login" onclick="window.loginRapido('JUANLUIS', '123')">JUANLUIS (Admin)</button>
+              </div>
+            </div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 8px; text-align: center;">
+              Contraseña estándar: <code style="color: #f3b229; font-weight: bold;">123</code>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Carga de Bases de Datos Compiladas -->
+  <script src="palaversich_db.js"></script>
   <script src="empresas_db.js"></script>
   <script src="condiciones_db.js"></script>
   <script src="clientes_db.js"></script>
   <script src="domi_entrega_db.js"></script>
   <script src="productos_db.js"></script>
+
+  <!-- Sistema de Autenticación y Control de Acceso Aislado -->
+  <script src="auth_system.js"></script>
+
+  <!-- Supabase Realtime Client & Chat del Equipo (SG Montajes) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase_config.js"></script>
+  <script src="chat_system.js"></script>
+
   <script src="app.js"></script>
 </body>
 </html>
