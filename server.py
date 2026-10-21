@@ -17,9 +17,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
 def run():
+    socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("", PORT), Handler) as httpd:
         print("=" * 65)
-        print("🚀 CRM PRESEA ERP — GESTIÓN MULTI-EMPRESA DE NOTAS DE VENTA")
+        print("🚀 CRM — GESTIÓN MULTI-EMPRESA DE NOTAS DE VENTA")
         print("🏢 Empresas: PASINA S.A. • PALAVERSICH S.A. • PETROBONO S.A.")
         print(f"📡 Servidor corriendo en: http://localhost:{PORT}")
         print("=" * 65)

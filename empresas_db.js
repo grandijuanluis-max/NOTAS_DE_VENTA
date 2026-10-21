@@ -8,7 +8,7 @@ const EMPRESAS_CONFIG = {
     id: "pasina",
     nombre: "PASINA MARCELO ALEJANDRO",
     nombreCorto: "PASINA",
-    subtitulo: "Distribución Mayorista • Presea ERP",
+    subtitulo: "Distribución Mayorista",
     cuit: "20-14589632-4",
     iva: "RESPONSABLE INSCRIPTO",
     domicilio: "Aurora 3475 - Rosario, Pcia. Santa Fe",
@@ -58,7 +58,7 @@ const EMPRESAS_CONFIG = {
     id: "palaversich",
     nombre: "PALAVERSICH Y CIA. S.A.C.",
     nombreCorto: "PALAVERSICH",
-    subtitulo: "Soluciones Industriales y Agroquímica • Presea ERP",
+    subtitulo: "Soluciones Industriales y Agroquímica",
     cuit: "30-50124896-3",
     iva: "RESPONSABLE INSCRIPTO",
     domicilio: "Chiclana 8000 - Bahía Blanca, Pcia. Buenos Aires",
@@ -72,13 +72,12 @@ const EMPRESAS_CONFIG = {
     numeroBase: 4829,
     decimales: 2,
     monedaDefault: "2", // 2 = Dólares Estadounidenses
+    tieneListaPrecios: false,
     listasPrecios: [
-      { codigo: "LISTA_01", nombre: "LISTA 01 (General)" },
-      { codigo: "LISTA_AGRO", nombre: "LISTA AGROQUÍMICA" },
-      { codigo: "DISTRIBUIDOR", nombre: "DISTRIBUIDOR OFICIAL" },
-      { codigo: "LISTA_EXPORT", nombre: "EXPORTACIÓN / CONTADO" }
+      { codigo: "PRECIO_1", nombre: "Precio 1 (Maestro)" },
+      { codigo: "PRECIO_2", nombre: "Precio 2 (Maestro)" }
     ],
-    listaDefault: "LISTA_01",
+    listaDefault: "PRECIO_1",
     depositosSugeridos: [
       "50 - PREPARADO",
       "1 - CASA CENTRAL BAHÍA",
@@ -108,7 +107,7 @@ const EMPRESAS_CONFIG = {
     id: "petrobono",
     nombre: "PETROBONO S.A.",
     nombreCorto: "PETROBONO",
-    subtitulo: "Combustibles y Derivados • Presea ERP",
+    subtitulo: "Combustibles y Derivados",
     cuit: "30-68954123-9",
     iva: "RESPONSABLE INSCRIPTO",
     domicilio: "Ruta Pcial 27 y Acc. Pedro O. - San Martín, Córdoba",
@@ -530,16 +529,18 @@ const condicionesPetrobonoDB = [
   { codigo: "3", nombre: "E-CHEQ 30 DÍAS", dias: 30 }
 ];
 
-// Helper global para obtener clientes según empresa activa
+// Helper global para obtener clientes según empresa activa (Maestro de Clientes CLIENTESNV)
 window.getClientesPorEmpresa = function(empresaKey) {
-  if (empresaKey === 'petrobono') {
-    return clientesPetrobono;
+  if (typeof clientesDB !== 'undefined' && Array.isArray(clientesDB) && clientesDB.length > 0) {
+    if (empresaKey === 'petrobono' && typeof clientesPetrobono !== 'undefined') {
+      return [...clientesPetrobono, ...clientesDB];
+    }
+    if (empresaKey === 'palaversich' && typeof clientesPalaversich !== 'undefined') {
+      return [...clientesPalaversich, ...clientesDB];
+    }
+    return clientesDB;
   }
-  if (empresaKey === 'palaversich') {
-    return clientesPalaversich;
-  }
-  // PASINA MARCELO ALEJANDRO: Padrón oficial extraído de CLIENTESNV / CLIENTESPA
-  return (typeof clientesDB !== 'undefined' && Array.isArray(clientesDB)) ? clientesDB : [];
+  return [];
 };
 
 // Helper global para obtener catálogo de productos según empresa activa
