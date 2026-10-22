@@ -3,7 +3,7 @@
 // Precios oficiales con 4 decimales según Lista Única Presea
 // ==========================================================================
 
-const productosDB = [
+var productosDB = window.PRODUCTOS_PASINA = window.productosDB = [
   {
     "codigo": "7015",
     "detalle": "9LED 3AAA FLASHLIGHT BLISTER W/BATT",
@@ -15603,3 +15603,6 @@ const productosDB = [
     "cod_barras": "365758"
   }
 ];
+window.PRODUCTOS_PASINA = productosDB;
+window.productosDB = productosDB;
+

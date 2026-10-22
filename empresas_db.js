@@ -24,6 +24,10 @@ const EMPRESAS_CONFIG = {
     monedaDefault: "1", // 1 = Pesos
     listasPrecios: [
       { codigo: "LISTA_UNIC", nombre: "LISTA UNIFICADA (Default)" },
+      { codigo: "LISTA_CAD", nombre: "LISTA CADENAS / SUPERMERCADOS" },
+      { codigo: "LISTA_HERM", nombre: "LISTA HERMES COMERCIAL" },
+      { codigo: "LISTA_PET", nombre: "LISTA DISTRIBUIDORA PET" },
+      { codigo: "TOLEDO", nombre: "LISTA SUPERMERCADOS TOLEDO" },
       { codigo: "LISTA_MAY", nombre: "LISTA MAYORISTA GRANDE" },
       { codigo: "LISTA_DIST", nombre: "LISTA DISTRIBUIDOR" },
       { codigo: "LISTA_ESP", nombre: "LISTA ESPECIAL CLIENTE" }
@@ -529,40 +533,95 @@ const condicionesPetrobonoDB = [
   { codigo: "3", nombre: "E-CHEQ 30 DÍAS", dias: 30 }
 ];
 
-// Helper global para obtener clientes según empresa activa (Maestro de Clientes CLIENTESNV)
-window.getClientesPorEmpresa = function(empresaKey) {
-  if (typeof clientesDB !== 'undefined' && Array.isArray(clientesDB) && clientesDB.length > 0) {
-    if (empresaKey === 'petrobono' && typeof clientesPetrobono !== 'undefined') {
-      return [...clientesPetrobono, ...clientesDB];
-    }
-    if (empresaKey === 'palaversich' && typeof clientesPalaversich !== 'undefined') {
-      return [...clientesPalaversich, ...clientesDB];
-    }
-    return clientesDB;
+window.EMPRESAS_CONFIG = EMPRESAS_CONFIG;
+
+// Helper global para obtener clientes según empresa activa (Padrón Maestro Oficial)
+window.getClientesPorEmpresa = function(empresaKey, ignoreVendedorFilter) {
+  let currentKey = empresaKey || window.currentCompanyKey || 'palaversich';
+  let cleanKey = String(currentKey).trim().toLowerCase();
+  if (cleanKey === 'admin') {
+    cleanKey = (window.currentCompanyKey && window.currentCompanyKey !== 'admin') 
+      ? String(window.currentCompanyKey).toLowerCase() 
+      : 'palaversich';
   }
-  return [];
+
+  // 1. PALAVERSICH S.A.
+  if (cleanKey === 'palaversich') {
+    const list = window.CLIENTES_PALAVERSICH || (typeof clientesPalaversichDB !== 'undefined' ? clientesPalaversichDB : []);
+    if (!ignoreVendedorFilter && typeof window.getVendedorFiltroActivo === 'function') {
+      const vNum = window.getVendedorFiltroActivo();
+      if (vNum && vNum !== "" && vNum !== "TODOS") {
+        return list.filter(c => String(c.vendedor || "").trim() === String(vNum).trim());
+      }
+    }
+    return list;
+  }
+
+  // 2. PASINA MARCELO ALEJANDRO
+  if (cleanKey === 'pasina') {
+    if (window.CLIENTES_PASINA && Array.isArray(window.CLIENTES_PASINA) && window.CLIENTES_PASINA.length > 0) {
+      return window.CLIENTES_PASINA;
+    }
+    if (window.clientesDB && Array.isArray(window.clientesDB) && window.clientesDB.length > 0) {
+      return window.clientesDB;
+    }
+    if (typeof clientesDB !== 'undefined' && Array.isArray(clientesDB) && clientesDB.length > 0) {
+      return clientesDB;
+    }
+    return [];
+  }
+
+  // 3. PETROBONO S.A.
+  if (cleanKey === 'petrobono') {
+    return (typeof clientesPetrobono !== 'undefined') ? clientesPetrobono : [];
+  }
+
+  // Fallback a Palaversich si la clave no coincide
+  return window.CLIENTES_PALAVERSICH || [];
 };
 
 // Helper global para obtener catálogo de productos según empresa activa
 window.getProductosPorEmpresa = function(empresaKey) {
-  if (empresaKey === 'petrobono') {
-    return productosPetrobono;
+  let currentKey = empresaKey || window.currentCompanyKey || 'palaversich';
+  let cleanKey = String(currentKey).trim().toLowerCase();
+  if (cleanKey === 'admin') {
+    cleanKey = (window.currentCompanyKey && window.currentCompanyKey !== 'admin') 
+      ? String(window.currentCompanyKey).toLowerCase() 
+      : 'palaversich';
   }
-  if (empresaKey === 'palaversich') {
-    return productosPalaversich;
+
+  if (cleanKey === 'palaversich') {
+    return window.PRODUCTOS_PALAVERSICH || [];
   }
-  // PASINA MARCELO ALEJANDRO: Catálogo oficial extraído de PRODUCTOSNV / PRODUCTOSPA
-  return (typeof productosDB !== 'undefined' && Array.isArray(productosDB)) ? productosDB : [];
+  if (cleanKey === 'pasina') {
+    return window.PRODUCTOS_PASINA || window.productosDB || (typeof productosDB !== 'undefined' && Array.isArray(productosDB) ? productosDB : []);
+  }
+  if (cleanKey === 'petrobono') {
+    return (typeof productosPetrobono !== 'undefined') ? productosPetrobono : [];
+  }
+  return window.PRODUCTOS_PALAVERSICH || [];
 };
 
 // Helper global para obtener condiciones de venta según empresa activa
 window.getCondicionesPorEmpresa = function(empresaKey) {
-  if (empresaKey === 'petrobono') {
-    return condicionesPetrobonoDB;
+  let currentKey = empresaKey || window.currentCompanyKey || 'palaversich';
+  let cleanKey = String(currentKey).trim().toLowerCase();
+  if (cleanKey === 'admin') {
+    cleanKey = (window.currentCompanyKey && window.currentCompanyKey !== 'admin') 
+      ? String(window.currentCompanyKey).toLowerCase() 
+      : 'palaversich';
   }
-  if (empresaKey === 'palaversich') {
-    return condicionesPalaversichDB;
+
+  if (cleanKey === 'palaversich') {
+    return window.CONDICIONES_PALAVERSICH || (typeof condicionesPalaversichDB !== 'undefined' ? condicionesPalaversichDB : []);
   }
-  // PASINA MARCELO ALEJANDRO: Tabla oficial extraída de CONDICIONESNV
-  return (typeof condicionesPasinaDB !== 'undefined' && Array.isArray(condicionesPasinaDB)) ? condicionesPasinaDB : [];
+  if (cleanKey === 'pasina') {
+    return window.CONDICIONES_PASINA || (typeof condicionesPasinaDB !== 'undefined' ? condicionesPasinaDB : (typeof condicionesDB !== 'undefined' ? condicionesDB : []));
+  }
+  if (cleanKey === 'petrobono') {
+    return (typeof condicionesPetrobonoDB !== 'undefined') ? condicionesPetrobonoDB : [];
+  }
+  return window.CONDICIONES_PALAVERSICH || [];
 };
+
+

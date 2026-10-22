@@ -7,7 +7,7 @@
   <title>Ingreso de Nota de Venta • Presea ERP</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20261022_v2">
 </head>
 <body>
 
@@ -188,11 +188,11 @@
         <div class="grid-3">
           <div class="form-group">
             <label class="form-label">Domicilio del Cliente</label>
-            <input type="text" id="cliente-direccion" class="form-control" placeholder="Domicilio del cliente...">
+            <input type="text" id="cliente-direccion" class="form-control" readonly placeholder="-" style="background: rgba(15, 23, 42, 0.7); cursor: not-allowed; color: #cbd5e1;">
           </div>
           <div class="form-group">
             <label class="form-label" id="label-domicilio-entrega">Domicilio de Entrega</label>
-            <input type="text" id="transporte-domicilio" class="form-control" list="lista-domi-entrega" placeholder="Domicilio de entrega (Presea ERP)...">
+            <input type="text" id="transporte-domicilio" class="form-control" readonly placeholder="-" style="background: rgba(15, 23, 42, 0.7); cursor: not-allowed; color: #cbd5e1;">
             <datalist id="lista-domi-entrega"></datalist>
           </div>
           <div class="form-group" id="group-credito-cliente">
@@ -309,9 +309,6 @@
             <i class="fa-solid fa-cart-shopping" style="color: var(--warning); font-size: 18px;"></i>
             <span id="label-paso-articulos">Paso 3: Artículos de la Nota de Venta</span>
           </div>
-          <span style="font-size: 12px; color: var(--accent); font-weight: 600;" id="badge-decimales-info">
-            * Lista: LISTA_01 • Precios con 2 decimales
-          </span>
         </div>
 
         <div class="product-picker-row">
@@ -331,15 +328,15 @@
           </div>
           <div class="form-group" style="margin-bottom: 0; width: 160px;">
             <label class="form-label" id="label-prod-precio">Precio Unitario ($)</label>
-            <input type="number" id="prod-precio" class="form-control" step="any" placeholder="0.00">
+            <input type="number" id="prod-precio" class="form-control" step="any" placeholder="0.00" onfocus="this.select()">
           </div>
           <div class="form-group" style="margin-bottom: 0; width: 110px;">
             <label class="form-label">Cantidad</label>
-            <input type="number" id="prod-cantidad" class="form-control" value="1" min="0.01" step="any">
+            <input type="number" id="prod-cantidad" class="form-control" value="1" min="0.01" step="any" onfocus="this.select()">
           </div>
           <div class="form-group" style="margin-bottom: 0; width: 100px;">
             <label class="form-label">Dto. %</label>
-            <input type="number" id="prod-bonif" class="form-control" value="0.00" min="0" max="100" step="0.01">
+            <input type="number" id="prod-bonif" class="form-control" value="0.00" min="0" max="100" step="0.01" onfocus="this.select()">
           </div>
           <div style="display: flex; gap: 6px; align-items: flex-end;">
             <button type="button" id="btn-agregar-item" class="btn btn-primary" style="height: 38px; display: flex; align-items: center; gap: 8px; white-space: nowrap;">
@@ -784,19 +781,11 @@
           <!-- 4. Bloque Inferior Dividido (Izquierda: Observaciones/Plazos | Derecha: Totales) -->
           <div class="voucher-bottom-grid">
             
-            <!-- Columna Izquierda: Observaciones y Plazos -->
+            <!-- Columna Izquierda: Observaciones -->
             <div class="voucher-bottom-left">
-              <div class="voucher-box voucher-notes-box" style="flex: 1; min-height: 120px; display: flex; flex-direction: column;">
+              <div class="voucher-box voucher-notes-box" style="flex: 1; height: 100%; min-height: 120px; display: flex; flex-direction: column;">
                 <div class="v-label" style="font-weight: 800; font-size: 11px; margin-bottom: 4px;">OBSERVACIONES:</div>
                 <div class="v-val" id="presea-obs-val" style="font-size: 11.5px; line-height: 1.4; white-space: pre-wrap; flex: 1;">-</div>
-              </div>
-
-              <!-- Recuadro inferior: Plazos y Cuotas -->
-              <div class="voucher-box voucher-plazos-box">
-                <div><span class="v-label">PLAZO</span> <strong class="v-val">A fecha</strong></div>
-                <div><span class="v-label">DESC.</span> <strong class="v-val" id="presea-box2-desc">0.00%</strong></div>
-                <div><span class="v-label">CUOTA</span> <strong class="v-val" id="presea-cuota-val">0.00</strong></div>
-                <div><span class="v-label">DTO $</span> <strong class="v-val" id="presea-box2-dto">0.00</strong></div>
               </div>
             </div>
 
@@ -834,7 +823,6 @@
           <div class="voucher-footer-bar">
             <div>Usuario: <strong id="presea-footer-user">JUANLUIS</strong></div>
             <div>Fecha: <strong id="presea-footer-date">07/08/2018 14:48:13</strong></div>
-            <div>Item: <strong id="presea-footer-item">78</strong></div>
             <div>Página: <strong>1</strong></div>
           </div>
 
@@ -914,6 +902,50 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Advertencia: Salir sin Guardar Nota de Venta -->
+  <div id="modal-aviso-nv-pendiente" class="modal-overlay" style="display: none; z-index: 10000; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px);">
+    <div class="card" style="max-width: 520px; width: 92%; border-left: 5px solid #f59e0b; box-shadow: 0 10px 30px rgba(0,0,0,0.8); background: #1e293b; color: #f8fafc; border-radius: 12px; padding: 24px;">
+      <div style="display: flex; align-items: flex-start; gap: 16px; margin-bottom: 18px;">
+        <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <i class="fa-solid fa-triangle-exclamation" style="font-size: 24px; color: #f59e0b;"></i>
+        </div>
+        <div>
+          <h3 style="margin: 0 0 6px 0; font-size: 18px; color: #ffffff;">¿Desea salir sin guardar la Nota de Venta?</h3>
+          <p style="margin: 0; font-size: 13.5px; color: #94a3b8; line-height: 1.5;">
+            Tiene una Nota de Venta en curso que aún no ha sido registrada. Si cambia de pestaña sin guardarla, <strong>se borrarán los artículos y datos cargados</strong>.
+          </p>
+        </div>
+      </div>
+      
+      <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 12px 14px; margin-bottom: 20px; font-size: 13px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="color: #94a3b8;">Cliente:</span>
+          <strong id="aviso-nv-cliente" style="color: #38bdf8;">-</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="color: #94a3b8;">Artículos cargados:</span>
+          <strong id="aviso-nv-items" style="color: #34d399;">0 ítems</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: #94a3b8;">Total comprobante:</span>
+          <strong id="aviso-nv-total" style="color: var(--warning);">$ 0.00</strong>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
+        <button type="button" id="btn-aviso-nv-cancelar" class="btn btn-secondary" style="padding: 9px 16px;">
+          <i class="fa-solid fa-xmark"></i> Permanecer en la Carga
+        </button>
+        <button type="button" id="btn-aviso-nv-salir" class="btn" style="background: #dc2626; color: #ffffff; border: none; padding: 9px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+          <i class="fa-solid fa-trash-can"></i> Salir y Descartar
+        </button>
+        <button type="button" id="btn-aviso-nv-guardar" class="btn btn-primary" style="padding: 9px 16px;">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar NV Primero
+        </button>
       </div>
     </div>
   </div>
@@ -1077,20 +1109,20 @@
 
   <!-- Carga de Bases de Datos Compiladas -->
   <script src="palaversich_db.js"></script>
-  <script src="empresas_db.js"></script>
+  <script src="empresas_db.js?v=20261022"></script>
   <script src="condiciones_db.js"></script>
-  <script src="clientes_db.js"></script>
+  <script src="clientes_db.js?v=20261022"></script>
   <script src="domi_entrega_db.js"></script>
   <script src="productos_db.js"></script>
 
   <!-- Sistema de Autenticación y Control de Acceso Aislado -->
-  <script src="auth_system.js"></script>
+  <script src="auth_system.js?v=20261022_v2"></script>
 
   <!-- Supabase Realtime Client & Chat del Equipo (SG Montajes) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase_config.js"></script>
   <script src="chat_system.js"></script>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=20261022_v2"></script>
 </body>
 </html>

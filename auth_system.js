@@ -126,8 +126,26 @@
       passwords: ["123", "1234", "pala123", "carolina"],
       email: "carolina.mediavilla@palaversich.com"
     },
+    {
+      username: "PALAVERSICH",
+      nombre: "Operador Palaversich S.A.",
+      empresa: "palaversich",
+      vendedor: "",
+      role: "Ventas Palaversich",
+      passwords: ["123", "1234", "pala123", "palaversich"],
+      email: "ventas@palaversich.com"
+    },
 
     // --- PASINA MARCELO ALEJANDRO ---
+    {
+      username: "PASINA",
+      nombre: "Operador Pasina S.A.",
+      empresa: "pasina",
+      vendedor: "",
+      role: "Ventas Pasina",
+      passwords: ["123", "1234", "pasina123", "pasina"],
+      email: "ventas@pasina.com"
+    },
     {
       username: "MARCELO",
       nombre: "Marcelo Alejandro Pasina",
@@ -247,15 +265,16 @@
 
     const userFound = AUTH_USERS.find(u => u.username.toUpperCase() === cleanUser);
     if (!userFound) {
-      // Si el usuario no está en la lista predefinida pero ingresó clave 123 o 1234, permitir acceso con empresa palaversich por defecto
+      // Si el usuario no está en la lista predefinida pero ingresó clave 123 o 1234
       if (cleanPass === "123" || cleanPass === "1234") {
+        const isPasina = cleanUser.includes("PASINA");
         return {
           username: cleanUser,
           nombre: cleanUser,
-          empresa: "palaversich",
+          empresa: isPasina ? "pasina" : "palaversich",
           vendedor: "",
-          role: "Usuario",
-          email: `${cleanUser.toLowerCase()}@empresa.com`
+          role: isPasina ? "Usuario Pasina" : "Usuario Palaversich",
+          email: `${cleanUser.toLowerCase()}@${isPasina ? 'pasina.com' : 'palaversich.com'}`
         };
       }
       return null;
@@ -320,9 +339,16 @@
     } else {
       // Administrador Central: tiene acceso multi-empresa
       if (switcher) switcher.style.setProperty("display", "flex", "important");
-      document.title = "Ingreso de Nota de Venta • Presea ERP";
+      const targetEmp = (companySelect && companySelect.value) ? companySelect.value : (window.currentCompanyKey || "palaversich");
+      if (companySelect) companySelect.value = targetEmp;
+      if (typeof window.setEmpresaActivaGlobal === "function") {
+        window.setEmpresaActivaGlobal(targetEmp);
+      }
+      document.title = targetEmp === 'pasina' 
+        ? "Ingreso de Nota de Venta • Pasina Marcelo Alejandro (Admin)" 
+        : "Ingreso de Nota de Venta • Palaversich y Cía. S.A.C. (Admin)";
       const configGroupPala = document.getElementById("cfg-group-vendedor-palaversich");
-      if (configGroupPala) configGroupPala.style.display = "block";
+      if (configGroupPala) configGroupPala.style.display = (targetEmp === 'palaversich') ? "block" : "none";
     }
 
     // Actualizar datos del usuario en UI
@@ -408,6 +434,14 @@
     const session = setAuthSession(auth);
     ocultarPantallaLogin();
     aplicarAislamientoEmpresa(session);
+
+    // Iniciar siempre en la pestaña de Ingreso de Nota de Venta
+    if (typeof window.ejecutarCambioPestana === "function") {
+      window.ejecutarCambioPestana("tab-nueva-nv");
+    } else {
+      const tabNvBtn = document.querySelector('.nav-tab[data-tab="tab-nueva-nv"]');
+      if (tabNvBtn) tabNvBtn.click();
+    }
   }
 
   // Cerrar sesión
@@ -488,6 +522,9 @@
       mostrarPantallaLogin();
     } else {
       aplicarAislamientoEmpresa(session);
+      if (typeof window.ejecutarCambioPestana === "function") {
+        window.ejecutarCambioPestana("tab-nueva-nv");
+      }
     }
   });
 

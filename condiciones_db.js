@@ -2,7 +2,7 @@
 // CONDICIONES_DB.JS — Tabla Oficial CONDICIONESNV (PASINA)
 // ==========================================================================
 
-const condicionesPasinaDB = [
+var condicionesPasinaDB = window.CONDICIONES_PASINA = window.condicionesDB = window.condicionesPasinaDB = [
   {
     "codigo": "1",
     "nombre": "CONTADO EFECTIVO",
@@ -60,3 +60,7 @@ const condicionesPasinaDB = [
   }
 ];
 const condicionesDB = condicionesPasinaDB;
+window.CONDICIONES_PASINA = condicionesPasinaDB;
+window.condicionesDB = condicionesPasinaDB;
+window.condicionesPasinaDB = condicionesPasinaDB;
+

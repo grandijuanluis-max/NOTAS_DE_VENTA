@@ -20,9 +20,19 @@
         unreadCount: 0,
         unreadPerConv: {}, // convKey -> count
         isOpen: false,
+        activeEmpresa: null,
         currentView: 'chat', // 'conversations', 'chat', 'create_group'
         isSoundEnabled: true
     };
+
+    function getActiveEmpresa() {
+        if (ChatState.activeEmpresa) return ChatState.activeEmpresa;
+        if (typeof window.currentCompanyKey === 'string' && window.currentCompanyKey) return window.currentCompanyKey.toLowerCase();
+        if (typeof appData !== 'undefined' && appData && appData.currentCompanyKey) return String(appData.currentCompanyKey).toLowerCase();
+        const cur = resolveCurrentUser();
+        if (cur && cur.empresa && cur.empresa !== 'admin') return cur.empresa.toLowerCase();
+        return 'palaversich';
+    }
 
     // --- REPRODUCTOR DE SONIDO CON WEB AUDIO API ---
     function playNotificationSound() {
@@ -130,8 +140,8 @@
             }
 
             const userKey = 'usr_' + user.id;
-            const userEmp = (user.empresa && user.empresa !== 'admin') ? user.empresa : 'general';
-            const presenceChanName = `crm_${userEmp}_presence`;
+            const activeEmp = getActiveEmpresa();
+            const presenceChanName = `crm_${activeEmp}_presence`;
 
             ChatState.presenceChannel = client.channel(presenceChanName, {
                 config: { presence: { key: userKey } }
@@ -156,6 +166,7 @@
                                     id: cur.id,
                                     username: cur.username,
                                     role: cur.role,
+                                    empresa: activeEmp,
                                     email: cur.email,
                                     onlineAt: new Date().toISOString()
                                 });
@@ -174,6 +185,7 @@
                             id: cur.id,
                             username: cur.username,
                             role: cur.role,
+                            empresa: activeEmp,
                             email: cur.email,
                             onlineAt: new Date().toISOString()
                         });
@@ -208,12 +220,17 @@
         const state = ChatState.presenceChannel.presenceState();
         ChatState.onlineUsers.clear();
 
+        const activeEmp = getActiveEmpresa();
+
         Object.keys(state).forEach(key => {
             const presences = state[key];
             if (Array.isArray(presences) && presences.length > 0) {
                 const latest = presences[presences.length - 1];
                 if (latest && latest.id) {
-                    ChatState.onlineUsers.set(String(latest.id), latest);
+                    // Filtrar que la presencia corresponda a la empresa activa o admin
+                    if (!latest.empresa || latest.empresa === activeEmp || latest.empresa === 'admin') {
+                        ChatState.onlineUsers.set(String(latest.id), latest);
+                    }
                 }
             }
         });
@@ -224,6 +241,7 @@
                 id: cur.id,
                 username: cur.username,
                 role: cur.role,
+                empresa: activeEmp,
                 email: cur.email,
                 onlineAt: new Date().toISOString()
             });
@@ -246,9 +264,8 @@
                 ChatState.chatChannel = null;
             }
 
-            const cur = resolveCurrentUser();
-            const userEmp = (cur && cur.empresa && cur.empresa !== 'admin') ? cur.empresa : 'general';
-            const chatChanName = `crm_${userEmp}_chat`;
+            const activeEmp = getActiveEmpresa();
+            const chatChanName = `crm_${activeEmp}_chat`;
 
             ChatState.chatChannel = client
                 .channel(chatChanName)
@@ -269,7 +286,7 @@
                 ChatState.dbChannel = null;
             }
             ChatState.dbChannel = client
-                .channel('public:notificaciones_chat')
+                .channel('public:notificaciones_chat_' + activeEmp)
                 .on('postgres_changes', {
                     event: 'INSERT',
                     schema: 'public',
@@ -278,10 +295,15 @@
                     if (payload.new && payload.new.message) {
                         try {
                             const parsed = JSON.parse(payload.new.message);
-                            if (payload.new.task_id === 'internal_chat') {
-                                handleIncomingMessage(parsed);
-                            } else if (payload.new.task_id === 'internal_chat_groups') {
-                                handleIncomingGroup(parsed);
+                            const taskId = String(payload.new.task_id || '');
+                            if (taskId === 'internal_chat_' + activeEmp || taskId === 'internal_chat') {
+                                if (!parsed.empresa || parsed.empresa === activeEmp) {
+                                    handleIncomingMessage(parsed);
+                                }
+                            } else if (taskId === 'internal_chat_groups_' + activeEmp || taskId === 'internal_chat_groups') {
+                                if (!parsed.empresa || parsed.empresa === activeEmp) {
+                                    handleIncomingGroup(parsed);
+                                }
                             }
                         } catch (e) {}
                     }
@@ -295,14 +317,18 @@
 
     // --- CARGAR HISTORIAL DE MENSAJES Y GRUPOS DESDE SUPABASE ---
     async function loadMessagesFromDb() {
+        const activeEmp = getActiveEmpresa();
         try {
-            const cached = localStorage.getItem('sg_chat_messages_history');
+            const cached = localStorage.getItem('sg_chat_messages_history_' + activeEmp);
             if (cached) {
                 const parsed = JSON.parse(cached);
                 if (Array.isArray(parsed)) {
                     ChatState.messages = parsed;
                     renderMessages();
                 }
+            } else {
+                ChatState.messages = [];
+                renderMessages();
             }
         } catch (e) {}
 
@@ -313,7 +339,7 @@
             const { data } = await client
                 .from('notificaciones')
                 .select('*')
-                .eq('task_id', 'internal_chat')
+                .in('task_id', ['internal_chat_' + activeEmp, 'internal_chat'])
                 .order('timestamp', { ascending: true })
                 .limit(250);
 
@@ -323,6 +349,9 @@
                     try {
                         const msg = typeof row.message === 'string' ? JSON.parse(row.message) : row.message;
                         if (msg && msg.id && msg.text) {
+                            if (msg.empresa && msg.empresa !== activeEmp) {
+                                return; // Descartar mensajes de otra empresa
+                            }
                             if (!msg.timestamp && row.timestamp) msg.timestamp = row.timestamp;
                             const cur = resolveCurrentUser();
                             const myId = cur ? String(cur.id) : '';
@@ -349,14 +378,18 @@
     }
 
     async function loadGroupsFromDb() {
+        const activeEmp = getActiveEmpresa();
         try {
-            const cached = localStorage.getItem('sg_chat_groups_list');
+            const cached = localStorage.getItem('sg_chat_groups_list_' + activeEmp);
             if (cached) {
                 const parsed = JSON.parse(cached);
                 if (Array.isArray(parsed)) {
                     ChatState.groups = parsed;
                     renderConversationsList();
                 }
+            } else {
+                ChatState.groups = [];
+                renderConversationsList();
             }
         } catch (e) {}
 
@@ -367,7 +400,7 @@
             const { data } = await client
                 .from('notificaciones')
                 .select('*')
-                .eq('task_id', 'internal_chat_groups')
+                .in('task_id', ['internal_chat_groups_' + activeEmp, 'internal_chat_groups'])
                 .order('timestamp', { ascending: true });
 
             if (data && Array.isArray(data)) {
@@ -376,6 +409,9 @@
                     try {
                         const grp = typeof row.message === 'string' ? JSON.parse(row.message) : row.message;
                         if (grp && grp.id && grp.name) {
+                            if (grp.empresa && grp.empresa !== activeEmp) {
+                                return; // Descartar grupos de otra empresa
+                            }
                             loadedGroups.push(grp);
                         }
                     } catch (e) {}
@@ -410,14 +446,16 @@
 
     function saveMessagesToLocal() {
         try {
+            const activeEmp = getActiveEmpresa();
             const toSave = ChatState.messages.slice(-200);
-            localStorage.setItem('sg_chat_messages_history', JSON.stringify(toSave));
+            localStorage.setItem('sg_chat_messages_history_' + activeEmp, JSON.stringify(toSave));
         } catch (e) {}
     }
 
     function saveGroupsToLocal() {
         try {
-            localStorage.setItem('sg_chat_groups_list', JSON.stringify(ChatState.groups));
+            const activeEmp = getActiveEmpresa();
+            localStorage.setItem('sg_chat_groups_list_' + activeEmp, JSON.stringify(ChatState.groups));
         } catch (e) {}
     }
 
@@ -506,6 +544,7 @@
             return;
         }
 
+        const activeEmp = getActiveEmpresa();
         const type = ChatState.activeConversationType;
         const activeId = ChatState.activeConversationId;
 
@@ -520,6 +559,7 @@
 
         const messageObj = {
             id: 'MSG-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6),
+            empresa: activeEmp,
             type: type, // 'general', 'dm', 'group'
             channel: type,
             senderId: String(cur.id),
@@ -559,7 +599,7 @@
                     id: messageObj.id,
                     message: JSON.stringify(messageObj),
                     read: false,
-                    task_id: 'internal_chat'
+                    task_id: 'internal_chat_' + activeEmp
                 }]).then(res => {
                     if (res.error) console.warn('Aviso guardando mensaje en Supabase:', res.error);
                 }).catch(e => {
@@ -578,12 +618,14 @@
         const cur = resolveCurrentUser();
         if (!cur) return;
 
+        const activeEmp = getActiveEmpresa();
         const cleanName = groupName.trim();
         // Asegurar que el creador esté en la lista de miembros
         const finalMembers = Array.from(new Set([String(cur.id), ...(memberIds || []).map(String)]));
 
         const newGroup = {
             id: 'GRP-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+            empresa: activeEmp,
             name: cleanName,
             createdBy: cur.username,
             createdById: String(cur.id),
@@ -614,7 +656,7 @@
                     id: 'GROUP_' + newGroup.id,
                     message: JSON.stringify(newGroup),
                     read: false,
-                    task_id: 'internal_chat_groups'
+                    task_id: 'internal_chat_groups_' + activeEmp
                 }]).then(res => {
                     if (res.error) console.warn('Aviso guardando grupo en Supabase:', res.error);
                 }).catch(e => console.warn('Error guardando grupo:', e));
@@ -699,7 +741,7 @@
 
     function getAllUsers() {
         const cur = resolveCurrentUser();
-        const curEmp = (cur && cur.empresa) ? String(cur.empresa).trim().toLowerCase() : '';
+        const activeEmp = getActiveEmpresa();
 
         let users = [];
         if (typeof window.CRM_DEFAULT_USERS !== 'undefined' && Array.isArray(window.CRM_DEFAULT_USERS) && window.CRM_DEFAULT_USERS.length > 0) {
@@ -708,12 +750,8 @@
             users = CRM_TEAM_USERS.map(u => Object.assign({}, u));
         }
 
-        // Filtro estricto por empresa: si es Palaversich, NO ve a Pasina; si es Pasina, NO ve a Palaversich
-        if (curEmp === 'palaversich') {
-            users = users.filter(u => u.empresa === 'palaversich' || u.empresa === 'admin');
-        } else if (curEmp === 'pasina') {
-            users = users.filter(u => u.empresa === 'pasina' || u.empresa === 'admin');
-        }
+        // Filtro estricto por empresa activa: si es Palaversich, NUNCA ve a Pasina; si es Pasina, NUNCA ve a Palaversich
+        users = users.filter(u => u.empresa === activeEmp || u.empresa === 'admin');
 
         if (cur && cur.username) {
             const curName = String(cur.username).trim().toLowerCase();
@@ -726,7 +764,7 @@
                     nombre: cur.nombreCompleto || cur.nombre || cur.username,
                     email: cur.email || (curName + '@empresa.com'),
                     role: cur.role || 'Ventas',
-                    empresa: curEmp
+                    empresa: activeEmp
                 });
             }
         }
@@ -752,7 +790,8 @@
         if (widgetEl) widgetEl.style.display = 'block';
 
         if (countEl) {
-            const totalOnline = Math.max(1, ChatState.onlineUsers.size);
+            const validUsers = getAllUsers();
+            const totalOnline = Math.max(1, validUsers.filter(u => ChatState.onlineUsers.has(String(u.id)) || (cur && String(u.id) === String(cur.id))).length);
             countEl.innerText = totalOnline === 1 ? '1 en línea' : `${totalOnline} en línea`;
         }
     }
@@ -1234,10 +1273,11 @@
 
         const type = ChatState.activeConversationType;
         const activeId = String(ChatState.activeConversationId);
+        const activeEmp = getActiveEmpresa();
 
         let filtered = [];
         if (type === 'general') {
-            filtered = ChatState.messages.filter(m => m.type === 'general' || m.channel === 'general');
+            filtered = ChatState.messages.filter(m => (m.type === 'general' || m.channel === 'general') && (!m.empresa || m.empresa === activeEmp));
         } else if (type === 'group') {
             filtered = ChatState.messages.filter(m => (m.type === 'group' || m.channel === 'group') && String(m.groupId) === activeId);
         } else {
@@ -1476,9 +1516,33 @@
         });
     }
 
+    function setEmpresaActiva(empresaKey) {
+        if (!empresaKey) return;
+        const normalized = String(empresaKey).trim().toLowerCase();
+        if (ChatState.activeEmpresa === normalized) return;
+        ChatState.activeEmpresa = normalized;
+
+        leavePresence();
+        initPresence();
+        initChatChannels();
+
+        ChatState.activeConversationId = 'general';
+        ChatState.activeConversationType = 'general';
+        ChatState.unreadCount = 0;
+        ChatState.unreadPerConv = {};
+
+        loadMessagesFromDb();
+        loadGroupsFromDb();
+
+        updateOnlinePillUI();
+        renderAllChatViews();
+    }
+
     // --- API PÚBLICA EXPUESTA EN WINDOW ---
     window.SGChat = {
         setUser: setUser,
+        setEmpresaActiva: setEmpresaActiva,
+        getActiveEmpresa: getActiveEmpresa,
         toggleChat: toggleChat,
         openChat: openChat,
         closeChat: closeChat,

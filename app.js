@@ -6,6 +6,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   // Estado global de la aplicación
   let currentCompanyKey = "palaversich"; // Empresa seleccionada
+  window.currentCompanyKey = currentCompanyKey;
   let currentCompany = EMPRESAS_CONFIG[currentCompanyKey];
   
   let currentClient = null;
@@ -13,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentItems = [];
   let currentCotizacion = 1450.00;
 
-  // Datos Adicionales exclusivos de Palaversich (vienen vacíos por defecto y son obligatorios)
+  // Datos Adicionales exclusivos de Palaversich (siempre deben venir vacíos por defecto)
   let palaExtras = {
     comisionista: false,
     tipoNv: "",
@@ -249,7 +250,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const clienteCreditoVal = document.getElementById("cliente-credito-val");
   const clienteSaldoVal = document.getElementById("cliente-saldo-val");
   const inputObservaciones = document.getElementById("input-observaciones");
-  const badgeDecimalesInfo = document.getElementById("badge-decimales-info");
+
+  // Domicilio de cliente y de entrega no son editables
+  if (clienteDireccion) clienteDireccion.readOnly = true;
+  if (transporteDomicilio) transporteDomicilio.readOnly = true;
 
   // Elementos del Formulario - Artículos
   const inputBuscarProducto = document.getElementById("input-buscar-producto");
@@ -304,7 +308,12 @@ document.addEventListener("DOMContentLoaded", () => {
   function setEmpresaActiva(key) {
     if (!EMPRESAS_CONFIG[key]) return;
     currentCompanyKey = key;
+    window.currentCompanyKey = key;
     currentCompany = EMPRESAS_CONFIG[key];
+
+    if (companySelect && companySelect.value !== key) {
+      companySelect.value = key;
+    }
 
     // Actualizar Encabezado y Marca
     if (currentCompany.logoImg) {
@@ -372,11 +381,14 @@ document.addEventListener("DOMContentLoaded", () => {
       groupTransporte3.style.display = "none";
     }
 
-    // Paso 2: Datos Adicionales (Exclusivo PALAVERSICH)
+    // Paso 2: Datos Adicionales (Exclusivo PALAVERSICH - Siempre vacío por defecto)
     if (cardPaso2DatosAdic) {
       if (currentCompany.tieneDatosAdicionales) {
         cardPaso2DatosAdic.style.display = "block";
         if (labelPasoArticulos) labelPasoArticulos.textContent = "Paso 3: Artículos de la Nota de Venta";
+        palaExtras = { comisionista: false, tipoNv: "", entrega: "", pago: "" };
+        document.querySelectorAll('input[name="rad-tipo-nv"], input[name="rad-entrega"], input[name="rad-pago"]').forEach(r => r.checked = false);
+        if (chkComisionista) chkComisionista.checked = false;
         actualizarIndicadorDatosAdicionales();
       } else {
         cardPaso2DatosAdic.style.display = "none";
@@ -390,6 +402,8 @@ document.addEventListener("DOMContentLoaded", () => {
       selectCondicion.innerHTML = condicionesActivas.map(c => 
         `<option value="${c.codigo}">${c.nombre} (${c.dias} días)</option>`
       ).join("");
+      const contOpt = Array.from(selectCondicion.options).find(o => o.text.toUpperCase().includes("CONTADO"));
+      selectCondicion.value = contOpt ? contOpt.value : selectCondicion.options[0].value;
     }
 
     // Moneda y cotización default
@@ -415,9 +429,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (cfgEmpLabel) {
       cfgEmpLabel.textContent = currentCompany.nombreCorto;
     }
-
-    // Decimales info badge
-    badgeDecimalesInfo.textContent = `* Precios de lista con ${currentCompany.decimales} decimales • Presea ERP`;
 
     // Límite de Crédito (exclusivo Palaversich, oculto en Pasina)
     const labelCredito = document.getElementById("label-credito-cliente");
@@ -492,26 +503,33 @@ document.addEventListener("DOMContentLoaded", () => {
       headerStats.textContent = `${clientesList.length.toLocaleString()} Clientes (${tablaClie}) • ${prodsList.length.toLocaleString()} Artículos • Presea ERP`;
     }
 
+    // Notificar a Chat System sobre el cambio de empresa
+    if (window.SGChat && typeof window.SGChat.setEmpresaActiva === "function") {
+      window.SGChat.setEmpresaActiva(key);
+    }
+
     // Limpiar selección actual si no pertenece
     limpiarFormulario(false);
 
-    // Refrescar vistas secundarias si están activas
+    // Refrescar vistas secundarias de inmediato
+    renderClientesMaestro();
+    renderCatalogo();
     const activeTab = document.querySelector(".nav-tab.active");
-    if (activeTab) {
-      if (activeTab.dataset.tab === "tab-historial") renderHistorial();
-      if (activeTab.dataset.tab === "tab-stock") renderCatalogo();
-      if (activeTab.dataset.tab === "tab-clientes") renderClientesMaestro();
+    if (activeTab && activeTab.dataset && activeTab.dataset.tab === "tab-historial") {
+      renderHistorial();
     }
   }
 
-  // Listener del Selector de Empresa (Solo para administradores)
+  // Listener del Selector de Empresa (con aviso si hay Nota de Venta en proceso)
   companySelect.addEventListener("change", (e) => {
-    const sess = (window.CRMAuth && typeof window.CRMAuth.getAuthSession === "function") ? window.CRMAuth.getAuthSession() : null;
-    if (sess && sess.empresa && sess.empresa !== 'admin') {
-      setEmpresaActiva(sess.empresa);
-      return;
+    const targetKey = e.target.value;
+    if (typeof tieneNotaDeVentaEnCurso === 'function' && tieneNotaDeVentaEnCurso()) {
+      if (!confirm("⚠️ ATENCIÓN: Tiene una Nota de Venta en curso con artículos o cliente seleccionado.\n\nSi cambia de empresa sin guardar, la Nota de Venta actual se borrará.\n\n¿Desea cambiar de empresa y descartar los datos cargados?")) {
+        e.target.value = currentCompanyKey;
+        return;
+      }
     }
-    setEmpresaActiva(e.target.value);
+    setEmpresaActiva(targetKey);
   });
 
   // ==========================================================================
@@ -566,11 +584,39 @@ document.addEventListener("DOMContentLoaded", () => {
     displayFolioNum.textContent = nextNumStr;
   }
 
+  const MAPA_VENDEDORES_PALA = {
+    '1': 'ROMERO, SEBASTIAN',
+    '2': 'BATO / CARO',
+    '3': 'DIAZ, MARTIN',
+    '4': 'ILARRAZ, CARLOS',
+    '5': 'BATO, FERNANDO',
+    '6': 'GALLARDO, PABLO',
+    '7': 'BATO, FERNANDO',
+    '8': 'MONTIEL, EDUARDO',
+    '9': 'MONTIEL / CARO',
+    '10': 'MAGGIO, JOSE IGNACIO',
+    '11': 'SALEMI, BRUNO',
+    '12': 'ILLIA, JUAN CRUZ',
+    '13': 'MOLINA, EMANUEL'
+  };
+
   function getOrdersHistory(empresaKey) {
     const list = JSON.parse(localStorage.getItem(`presea_orders_${empresaKey}`) || "[]");
     return list.map(o => {
       if (!o.estado || o.estado.toLowerCase().includes("autorizar")) {
         o.estado = "INGRESADA";
+      }
+      // Garantizar que el usuario creador original sea inmutable y no cambie al cambiar de sesión
+      if (!o.usuario && !o.usuario_creador) {
+        const vend = o.vendedor;
+        if (vend && MAPA_VENDEDORES_PALA[vend]) {
+          o.usuario = MAPA_VENDEDORES_PALA[vend];
+        } else {
+          o.usuario = (o.vendedor ? `VEND_${o.vendedor}` : (empresaKey === 'pasina' ? 'PASINA' : 'OPERADOR'));
+        }
+      }
+      if (!o.usuario_creador) {
+        o.usuario_creador = o.usuario;
       }
       return o;
     });
@@ -611,6 +657,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <span><strong>Cód:</strong> ${c.codigo}</span>
             <span><strong>CUIT:</strong> ${c.cuit || 'S/D'}</span>
             <span><strong>Loc:</strong> ${c.localidad || '-'}</span>
+            <span style="color: #38bdf8;"><strong>Lista:</strong> ${currentCompanyKey === 'palaversich' ? (c.lista === '2' ? 'Precio 2' : 'Precio 1') : (c.listapre || c.lista || 'LISTA_UNIC')}</span>
           </div>
         </div>
       `).join("");
@@ -667,13 +714,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   function enfocarSiguientePaso() {
-    if (currentCompanyKey === 'palaversich') {
-      const firstRadio = document.getElementById("rad-tipo-consignacion");
-      const cardPaso2 = document.getElementById("card-paso-2-datos-adic");
-      if (cardPaso2) cardPaso2.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      if (firstRadio) firstRadio.focus();
-    } else {
-      inputBuscarProducto.focus();
+    // Al seleccionar el cliente, permanecer en el Paso 1 para que el usuario
+    // pueda revisar y completar condición de venta, moneda, depósito, fechas y logística
+    if (selectCondicion) {
+      selectCondicion.focus();
+    } else if (selectListaPrecios) {
+      selectListaPrecios.focus();
     }
   }
 
@@ -682,7 +728,7 @@ document.addEventListener("DOMContentLoaded", () => {
     inputBuscarCliente.value = cliente.nombre;
     clienteCuit.value = cliente.cuit || "Sin CUIT registrado";
 
-    // Domicilio oficial extraído del Maestro de Clientes (CLIENTESNV)
+    // 1. Domicilio oficial extraído del Maestro de Clientes (CLIENTESNV)
     if (clienteDireccion) {
       let domFiscal = (cliente.domicilio || "").trim();
       if (cliente.localidad && cliente.localidad.trim()) {
@@ -695,29 +741,106 @@ document.addEventListener("DOMContentLoaded", () => {
         domFiscal += ` (CP ${cliente.cp.trim()})`;
       }
       clienteDireccion.value = domFiscal || "-";
+      clienteDireccion.readOnly = true;
     }
 
-    // Asignar lista de precios del cliente si existe
-    if (cliente.lista) {
-      const matchedOpt = Array.from(selectListaPrecios.options).find(o => o.value === cliente.lista);
-      if (matchedOpt) {
-        selectListaPrecios.value = cliente.lista;
+    // 2. Condición de Venta por defecto del cliente
+    if (selectCondicion) {
+      let setCond = false;
+      if (cliente.condicion !== undefined && cliente.condicion !== null && String(cliente.condicion).trim() !== "") {
+        const cCod = String(cliente.condicion).trim();
+        let opt = Array.from(selectCondicion.options).find(o => String(o.value).trim() === cCod);
+        if (!opt && (cCod === "0" || cCod === "1")) {
+          opt = Array.from(selectCondicion.options).find(o => 
+            o.text.toUpperCase().includes("CONTADO") || o.value === "1001" || o.value === "1"
+          );
+        }
+        if (opt) {
+          selectCondicion.value = opt.value;
+          setCond = true;
+        }
+      }
+      if (!setCond && selectCondicion.options.length > 0) {
+        const contOpt = Array.from(selectCondicion.options).find(o => o.text.toUpperCase().includes("CONTADO"));
+        selectCondicion.value = contOpt ? contOpt.value : selectCondicion.options[0].value;
       }
     }
 
-    // Datos de transporte del cliente
-    if (cliente.transporte_nombre) {
-      inputTransporte1.value = `${cliente.transporte || ''} - ${cliente.transporte_nombre}`;
+    // 3. Vendedor por defecto asignado al cliente o a la empresa
+    if (inputVendedor) {
+      if (cliente.nom_vende && cliente.nom_vende.trim()) {
+        const vNum = cliente.vendedor ? `Vend. ${cliente.vendedor} - ` : '';
+        inputVendedor.value = `${vNum}${cliente.nom_vende.trim()}`;
+      } else if (cliente.vendedor && String(cliente.vendedor).trim()) {
+        const vCod = String(cliente.vendedor).trim();
+        if (MAPA_VENDEDORES_PALA[vCod]) {
+          inputVendedor.value = `Vend. ${vCod} - ${MAPA_VENDEDORES_PALA[vCod]}`;
+        } else {
+          inputVendedor.value = `Vend. ${vCod}`;
+        }
+      } else {
+        const overrides = getEmpresaConfigOverride(currentCompanyKey);
+        inputVendedor.value = (overrides.vendedorDefault !== undefined && overrides.vendedorDefault !== "") 
+          ? overrides.vendedorDefault 
+          : (currentCompany.vendedorDefault || "Casa Central");
+      }
     }
 
-    // Autocompletar vendedor asignado al cliente
-    if (cliente.nom_vende && cliente.nom_vende.trim()) {
-      inputVendedor.value = cliente.nom_vende.trim();
-    } else if (cliente.vendedor && cliente.vendedor.trim()) {
-      inputVendedor.value = cliente.vendedor.trim();
+    // 4. Asignar lista de precios del cliente (desde el Maestro de Clientes)
+    if (selectListaPrecios) {
+      if (currentCompanyKey === 'palaversich') {
+        const lCod = String(cliente.lista || cliente.listapre || '1').trim();
+        selectListaPrecios.value = (lCod === '2' || lCod === 'PRECIO_2') ? 'PRECIO_2' : 'PRECIO_1';
+      } else {
+        const targetLista = String(cliente.listapre || cliente.lista || 'LISTA_UNIC').trim();
+        let matchedOpt = Array.from(selectListaPrecios.options).find(o => 
+          String(o.value).trim().toUpperCase() === targetLista.toUpperCase() ||
+          (targetLista === "0" && o.value.includes("UNIC")) ||
+          o.value.startsWith(targetLista)
+        );
+        if (!matchedOpt && targetLista && targetLista !== "0") {
+          const newOpt = document.createElement("option");
+          newOpt.value = targetLista;
+          newOpt.textContent = `${targetLista} (Lista Asignada al Cliente)`;
+          selectListaPrecios.appendChild(newOpt);
+          matchedOpt = newOpt;
+        }
+        if (matchedOpt) {
+          selectListaPrecios.value = matchedOpt.value;
+        } else if (selectListaPrecios.options.length > 0) {
+          selectListaPrecios.selectedIndex = 0;
+        }
+      }
     }
 
-    // Domicilio de Entrega desde domi_entrega_pasina.DBI
+    // 5. Depósito por defecto
+    if (inputDeposito && (!inputDeposito.value || inputDeposito.value.trim() === "")) {
+      const overrides = getEmpresaConfigOverride(currentCompanyKey);
+      inputDeposito.value = (overrides.depositoDefault !== undefined && overrides.depositoDefault !== "") 
+        ? overrides.depositoDefault 
+        : (currentCompany.depositoDefault || "01");
+    }
+
+    // 6. Datos de transporte del cliente
+    if (inputTransporte1) {
+      if (cliente.transporte_nombre && cliente.transporte_nombre.trim()) {
+        inputTransporte1.value = `${cliente.transporte ? cliente.transporte + ' - ' : ''}${cliente.transporte_nombre.trim()}`;
+      } else if (cliente.transporte && String(cliente.transporte).trim()) {
+        const tCod = String(cliente.transporte).trim();
+        const matchedT = (currentCompany.transportesSugeridos || []).find(t => String(t.codigo).trim() === tCod);
+        if (matchedT) {
+          inputTransporte1.value = `${matchedT.codigo} - ${matchedT.nombre}`;
+        } else {
+          inputTransporte1.value = tCod;
+        }
+      } else if (!inputTransporte1.value || inputTransporte1.value.trim() === "") {
+        if (currentCompany.transportesSugeridos && currentCompany.transportesSugeridos.length > 0) {
+          inputTransporte1.value = `${currentCompany.transportesSugeridos[0].codigo} - ${currentCompany.transportesSugeridos[0].nombre}`;
+        }
+      }
+    }
+
+    // 7. Domicilio de Entrega (Presea domi_entrega o domicilio fiscal)
     const domisEntrega = getDomiciliosEntregaCliente(cliente.codigo);
     const datalistDomi = document.getElementById("lista-domi-entrega");
     if (datalistDomi) {
@@ -727,24 +850,27 @@ document.addEventListener("DOMContentLoaded", () => {
       }).join("");
     }
 
-    if (domisEntrega.length > 0) {
-      // Domicilio de entrega oficial de Presea (domi_entrega_pasina.DBI)
-      const d0 = domisEntrega[0];
-      const primaryDomi = d0.domicilio + (d0.localidad ? ` - ${d0.localidad}` : '');
-      transporteDomicilio.value = primaryDomi;
-    } else if (cliente.domicilio) {
-      transporteDomicilio.value = cliente.domicilio + (cliente.localidad ? ` - ${cliente.localidad}` : '');
-    } else {
-      transporteDomicilio.value = "";
+    if (transporteDomicilio) {
+      if (domisEntrega.length > 0) {
+        const d0 = domisEntrega[0];
+        transporteDomicilio.value = d0.domicilio + (d0.localidad ? ` - ${d0.localidad}` : '');
+      } else if (cliente.domicilio) {
+        transporteDomicilio.value = cliente.domicilio + (cliente.localidad ? ` - ${cliente.localidad}` : '');
+      } else {
+        transporteDomicilio.value = "-";
+      }
+      transporteDomicilio.readOnly = true;
     }
 
-    // Datos crediticios (Límite de crédito exclusivo Palaversich)
+    // 8. Datos crediticios (Límite de crédito exclusivo Palaversich)
     if (currentCompanyKey === 'palaversich' && cliente.credito !== undefined) {
       clienteCreditoVal.textContent = `$ ${cliente.credito.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
     }
     if (cliente.saldo !== undefined) {
       clienteSaldoVal.textContent = `$ ${cliente.saldo.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
     }
+
+    // 9. Paso 2 en Palaversich siempre debe permanecer vacío hasta que el usuario elija sus opciones
   }
 
   // ==========================================================================
@@ -861,7 +987,10 @@ document.addEventListener("DOMContentLoaded", () => {
     prodPrecio.value = basePrice > 0 ? basePrice.toFixed(dec) : "0.00";
     prodCantidad.value = 1;
     prodBonif.value = getDefaultDto();
-    prodCantidad.focus();
+    setTimeout(() => {
+      prodCantidad.focus();
+      prodCantidad.select();
+    }, 40);
   }
 
   selectListaPrecios.addEventListener("change", () => {
@@ -870,8 +999,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Permitir agregar con Enter en cantidad o precio
+  // Auto-seleccionar todo el texto (pintar el número) al recibir foco o clic
   [prodCantidad, prodPrecio, prodBonif].forEach(inp => {
+    if (!inp) return;
+    inp.addEventListener("focus", function() {
+      setTimeout(() => this.select(), 20);
+    });
+    inp.addEventListener("click", function() {
+      this.select();
+    });
     inp.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -1118,6 +1254,41 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==========================================================================
   // 8. PASO 2: DATOS ADICIONALES (EXCLUSIVO PALAVERSICH)
   // ==========================================================================
+  function aplicarDefaultsDatosAdicionalesPalaversich() {
+    let selTipo = document.querySelector('input[name="rad-tipo-nv"]:checked');
+    let selEntrega = document.querySelector('input[name="rad-entrega"]:checked');
+    let selPago = document.querySelector('input[name="rad-pago"]:checked');
+
+    if (!selTipo) {
+      const defTipo = document.getElementById("rad-tipo-anticipada") || document.getElementById("rad-tipo-consignacion");
+      if (defTipo) {
+        defTipo.checked = true;
+        selTipo = defTipo;
+      }
+    }
+    if (!selEntrega) {
+      const defEntrega = document.getElementById("rad-entrega-retira");
+      if (defEntrega) {
+        defEntrega.checked = true;
+        selEntrega = defEntrega;
+      }
+    }
+    if (!selPago) {
+      const defPago = document.getElementById("rad-pago-transf");
+      if (defPago) {
+        defPago.checked = true;
+        selPago = defPago;
+      }
+    }
+
+    palaExtras.tipoNv = selTipo ? selTipo.value : "NV Anticipada";
+    palaExtras.entrega = selEntrega ? selEntrega.value : "Retira Cliente";
+    palaExtras.pago = selPago ? selPago.value : "Pago Transferencia";
+    palaExtras.comisionista = chkComisionista ? chkComisionista.checked : false;
+
+    actualizarIndicadorDatosAdicionales();
+  }
+
   function actualizarIndicadorDatosAdicionales() {
     const badge = document.getElementById("badge-datos-adic-status");
     const card = document.getElementById("card-paso-2-datos-adic");
@@ -1194,7 +1365,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const subtotal = currentItems.reduce((acc, it) => acc + it.subtotal, 0);
     const iva = subtotal * 0.21;
     const total = subtotal + iva;
-    const nroComprobante = displayFolioNum.textContent.trim();
+    const activeUser = (getUsuarioActivo() || "ADMIN").toUpperCase();
+    const activeUserName = (window.CRMAuth && window.CRMAuth.getAuthSession() && window.CRMAuth.getAuthSession().nombre) || activeUser;
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const fechaHoraStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
     const nuevaOrden = {
       empresa: currentCompanyKey,
@@ -1215,7 +1390,9 @@ document.addEventListener("DOMContentLoaded", () => {
       moneda_id: selectMoneda.value,
       moneda_nombre: isUSD ? "Dólares Estadoun." : "Pesos",
       cotizacion_usd: isUSD ? currentCotizacion : 1.0,
-      usuario: getUsuarioActivo(),
+      usuario: activeUser,
+      usuario_creador: activeUser,
+      usuario_nombre: activeUserName,
       vendedor: inputVendedor.value.trim(),
       transportes: {
         transporte_1: inputTransporte1.value.trim(),
@@ -1230,7 +1407,8 @@ document.addEventListener("DOMContentLoaded", () => {
       iva: iva,
       total: total,
       estado: "INGRESADA",
-      fecha_creacion: new Date().toISOString()
+      fecha_creacion: now.toISOString(),
+      fecha_impresion_creacion: fechaHoraStr
     };
 
     // Guardar en el histórico de la empresa activa
@@ -1276,7 +1454,10 @@ document.addEventListener("DOMContentLoaded", () => {
         moneda_id: currentCompany.monedaDefault,
         moneda_nombre: currentCompany.monedaDefault === "2" ? "Dólares Estadoun." : "Pesos",
         cotizacion_usd: currentCotizacion,
-        usuario: getUsuarioActivo(),
+        usuario: (getUsuarioActivo() || "ADMIN").toUpperCase(),
+        usuario_creador: (getUsuarioActivo() || "ADMIN").toUpperCase(),
+        fecha_creacion: new Date().toISOString(),
+        fecha_impresion_creacion: null,
         vendedor: currentCompany.vendedorDefault,
         transportes: { transporte_1: "Retira Cobro Vendedor", domicilio_entrega: "PELLEGRINI 64 - SANTA ROSA (CP 6300)" },
         pala_extras: currentCompanyKey === 'palaversich' ? { tipoNv: 'NV Consignación', entrega: 'Retira Cliente', pago: 'Pago Cheque', comisionista: false } : null,
@@ -1308,7 +1489,10 @@ document.addEventListener("DOMContentLoaded", () => {
       moneda_id: selectMoneda.value,
       moneda_nombre: isUSD ? "Dólares Estadoun." : "Pesos",
       cotizacion_usd: isUSD ? currentCotizacion : 1.0,
-      usuario: getUsuarioActivo(),
+      usuario: (getUsuarioActivo() || "ADMIN").toUpperCase(),
+      usuario_creador: (getUsuarioActivo() || "ADMIN").toUpperCase(),
+      fecha_creacion: new Date().toISOString(),
+      fecha_impresion_creacion: null,
       vendedor: inputVendedor.value.trim(),
       transportes: {
         transporte_1: inputTransporte1.value.trim(),
@@ -1448,12 +1632,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const bonifValEl = document.getElementById("presea-bonif-val");
     if (bonifValEl) bonifValEl.textContent = totalDescuento.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const box2DescEl = document.getElementById("presea-box2-desc");
-    if (box2DescEl) box2DescEl.textContent = `${pctDescuento.toFixed(2)}%`;
-
-    const box2DtoEl = document.getElementById("presea-box2-dto");
-    if (box2DtoEl) box2DtoEl.textContent = totalDescuento.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
     document.getElementById("presea-subtotal-val").textContent = totalBruto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     document.getElementById("presea-neto-val").textContent = totalNeto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     document.getElementById("presea-iva-val").textContent = orden.iva.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1463,9 +1641,6 @@ document.addEventListener("DOMContentLoaded", () => {
     
     document.getElementById("presea-total-val").textContent = orden.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const cuotaEl = document.getElementById("presea-cuota-val");
-    if (cuotaEl) cuotaEl.textContent = orden.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
     const deudaEl = document.getElementById("presea-deuda-val");
     if (deudaEl) {
       deudaEl.textContent = (orden.cliente && orden.cliente.saldo) 
@@ -1473,13 +1648,25 @@ document.addEventListener("DOMContentLoaded", () => {
         : '0.00';
     }
 
-    // Footer: El usuario que ingresó a la app y generó esta Nota de Venta
-    const userEmisor = (orden.usuario || getUsuarioActivo() || "ADMIN").toUpperCase();
+    // Footer: El usuario que realmente generó esta Nota de Venta (inmutable)
+    const userEmisor = (orden.usuario_creador || orden.usuario || "OPERADOR").toUpperCase();
     document.getElementById("presea-footer-user").textContent = userEmisor;
-    const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-    document.getElementById("presea-footer-date").textContent = dateStr;
+
+    // Fecha y hora original de emisión/creación de la orden
+    let fechaHoraEmision = orden.fecha_impresion_creacion;
+    if (!fechaHoraEmision && orden.fecha_creacion) {
+      try {
+        const d = new Date(orden.fecha_creacion);
+        const pad = n => String(n).padStart(2, '0');
+        fechaHoraEmision = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      } catch (e) {}
+    }
+    if (!fechaHoraEmision) {
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      fechaHoraEmision = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    }
+    document.getElementById("presea-footer-date").textContent = fechaHoraEmision;
 
     modalImpresion.style.display = "flex";
   }
@@ -1672,7 +1859,7 @@ document.addEventListener("DOMContentLoaded", () => {
     currentSelectedProduct = null;
     currentItems = [];
 
-    // Resetear Datos Adicionales para que vengan vacíos por defecto
+    // Resetear Datos Adicionales (Paso 2 en Palaversich siempre viene vacío por defecto)
     palaExtras = {
       comisionista: false,
       tipoNv: "",
@@ -1686,10 +1873,52 @@ document.addEventListener("DOMContentLoaded", () => {
     inputBuscarCliente.value = "";
     clienteCuit.value = "";
     clienteDireccion.value = "";
+    if (clienteDireccion) clienteDireccion.readOnly = true;
     transporteDomicilio.value = "";
+    if (transporteDomicilio) transporteDomicilio.readOnly = true;
     const datalistDomi = document.getElementById("lista-domi-entrega");
     if (datalistDomi) datalistDomi.innerHTML = "";
-    inputObservaciones.value = "";
+
+    // Restaurar defaults del vendedor de la empresa
+    const overrides = getEmpresaConfigOverride(currentCompanyKey);
+    if (inputVendedor) {
+      inputVendedor.value = (overrides.vendedorDefault !== undefined && overrides.vendedorDefault !== "") 
+        ? overrides.vendedorDefault 
+        : (currentCompany.vendedorDefault || "Casa Central");
+    }
+
+    // Restaurar condición de venta por defecto (Contado)
+    if (selectCondicion && selectCondicion.options.length > 0) {
+      const contOpt = Array.from(selectCondicion.options).find(o => o.text.toUpperCase().includes("CONTADO"));
+      selectCondicion.value = contOpt ? contOpt.value : selectCondicion.options[0].value;
+    }
+
+    // Restaurar lista de precios default
+    if (selectListaPrecios) {
+      if (currentCompanyKey === 'palaversich') {
+        selectListaPrecios.value = 'PRECIO_1';
+      } else if (currentCompany.listaDefault) {
+        selectListaPrecios.value = currentCompany.listaDefault;
+      }
+    }
+
+    // Restaurar depósito default
+    if (inputDeposito) {
+      inputDeposito.value = (overrides.depositoDefault !== undefined && overrides.depositoDefault !== "") 
+        ? overrides.depositoDefault 
+        : (currentCompany.depositoDefault || "01");
+    }
+
+    // Restaurar transporte default
+    if (inputTransporte1) {
+      if (currentCompany.transportesSugeridos && currentCompany.transportesSugeridos.length > 0) {
+        inputTransporte1.value = `${currentCompany.transportesSugeridos[0].codigo} - ${currentCompany.transportesSugeridos[0].nombre}`;
+      } else {
+        inputTransporte1.value = "";
+      }
+    }
+
+    inputObservaciones.value = overrides.observacionesDefault || "";
     clienteSaldoVal.textContent = `$ ${currentCompany.saldoDefault}`;
     clienteCreditoVal.textContent = `$ 0.00`;
 
@@ -1708,21 +1937,103 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==========================================================================
-  // 12. PESTAÑAS: HISTORIAL, CATÁLOGO Y CLIENTES
   // ==========================================================================
+  // 12. PESTAÑAS: NAVEGACIÓN Y AVISO DE NOTA DE VENTA EN CURSO (HISTORIAL, ETC.)
+  // ==========================================================================
+  let pestanaDestinoPendiente = null;
+  const modalAvisoNv = document.getElementById("modal-aviso-nv-pendiente");
+  const btnAvisoNvCancelar = document.getElementById("btn-aviso-nv-cancelar");
+  const btnAvisoNvSalir = document.getElementById("btn-aviso-nv-salir");
+  const btnAvisoNvGuardar = document.getElementById("btn-aviso-nv-guardar");
+
+  function tieneNotaDeVentaEnCurso() {
+    return Boolean(
+      (currentItems && currentItems.length > 0) || 
+      currentClient !== null || 
+      (inputBuscarCliente && inputBuscarCliente.value.trim() !== "")
+    );
+  }
+
+  function mostrarModalAvisoNvPendiente(targetTabId) {
+    pestanaDestinoPendiente = targetTabId;
+    if (!modalAvisoNv) {
+      if (confirm("⚠️ ATENCIÓN: Tiene una Nota de Venta en curso con artículos o cliente seleccionado.\n\nSi pasa al Historial u otra sección sin guardar, la Nota de Venta actual se borrará.\n\n¿Desea salir y descartar los datos cargados?")) {
+        limpiarFormulario(false);
+        ejecutarCambioPestana(targetTabId);
+      }
+      return;
+    }
+
+    const isUSD = (selectMoneda && selectMoneda.value === "2");
+    const currSign = isUSD ? "u$s" : "$";
+    const subtotal = currentItems.reduce((acc, it) => acc + (it.subtotal || 0), 0);
+    const total = subtotal * 1.21;
+
+    const elCliente = document.getElementById("aviso-nv-cliente");
+    const elItems = document.getElementById("aviso-nv-items");
+    const elTotal = document.getElementById("aviso-nv-total");
+
+    if (elCliente) elCliente.textContent = currentClient ? currentClient.nombre : (inputBuscarCliente.value.trim() || "Sin cliente seleccionado");
+    if (elItems) elItems.textContent = `${currentItems.length} artículo${currentItems.length === 1 ? '' : 's'}`;
+    if (elTotal) elTotal.textContent = `${currSign} ${total.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+    modalAvisoNv.style.display = "flex";
+  }
+
+  function ocultarModalAvisoNvPendiente() {
+    if (modalAvisoNv) modalAvisoNv.style.display = "none";
+    pestanaDestinoPendiente = null;
+  }
+
+  function ejecutarCambioPestana(targetTabId) {
+    navTabs.forEach(t => t.classList.toggle("active", t.dataset.tab === targetTabId));
+    tabPanes.forEach(p => p.classList.toggle("active", p.id === targetTabId));
+
+    if (targetTabId === "tab-historial") renderHistorial();
+    if (targetTabId === "tab-stock") renderCatalogo();
+    if (targetTabId === "tab-clientes") renderClientesMaestro();
+    if (targetTabId === "tab-config") cargarFormularioConfiguracion();
+  }
+
+  if (btnAvisoNvCancelar) {
+    btnAvisoNvCancelar.addEventListener("click", () => {
+      ocultarModalAvisoNvPendiente();
+    });
+  }
+
+  if (btnAvisoNvSalir) {
+    btnAvisoNvSalir.addEventListener("click", () => {
+      const dest = pestanaDestinoPendiente || "tab-historial";
+      ocultarModalAvisoNvPendiente();
+      limpiarFormulario(false);
+      ejecutarCambioPestana(dest);
+    });
+  }
+
+  if (btnAvisoNvGuardar) {
+    btnAvisoNvGuardar.addEventListener("click", () => {
+      const dest = pestanaDestinoPendiente || "tab-historial";
+      ocultarModalAvisoNvPendiente();
+      btnGuardarNv.click();
+      if (!tieneNotaDeVentaEnCurso()) {
+        ejecutarCambioPestana(dest);
+      }
+    });
+  }
+
   navTabs.forEach(tab => {
     tab.addEventListener("click", () => {
-      navTabs.forEach(t => t.classList.remove("active"));
-      tabPanes.forEach(p => p.classList.remove("active"));
+      const targetTab = tab.dataset.tab;
+      const currentActiveTab = document.querySelector(".nav-tab.active");
+      const currentTabId = currentActiveTab ? currentActiveTab.dataset.tab : "tab-nueva-nv";
 
-      tab.classList.add("active");
-      const targetPane = document.getElementById(tab.dataset.tab);
-      if (targetPane) targetPane.classList.add("active");
+      // Si está en la pestaña de carga de NV y hace clic en otra pestaña (por ej. Historial)
+      if (currentTabId === "tab-nueva-nv" && targetTab !== "tab-nueva-nv" && tieneNotaDeVentaEnCurso()) {
+        mostrarModalAvisoNvPendiente(targetTab);
+        return;
+      }
 
-      if (tab.dataset.tab === "tab-historial") renderHistorial();
-      if (tab.dataset.tab === "tab-stock") renderCatalogo();
-      if (tab.dataset.tab === "tab-clientes") renderClientesMaestro();
-      if (tab.dataset.tab === "tab-config") cargarFormularioConfiguracion();
+      ejecutarCambioPestana(targetTab);
     });
   });
 
@@ -1736,7 +2047,7 @@ document.addEventListener("DOMContentLoaded", () => {
       !filtro || 
       (o.numero && o.numero.toLowerCase().includes(filtro)) ||
       (o.cliente && o.cliente.nombre && o.cliente.nombre.toLowerCase().includes(filtro)) ||
-      (o.usuario && o.usuario.toLowerCase().includes(filtro))
+      ((o.usuario_creador || o.usuario) && (o.usuario_creador || o.usuario).toLowerCase().includes(filtro))
     );
 
     if (filtered.length === 0) {
@@ -1753,14 +2064,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const isUSD = (currentCompany.monedaDefault === "2");
     const currSign = isUSD ? "u$s" : "$";
 
-    tbody.innerHTML = filtered.map((o, idx) => `
+    tbody.innerHTML = filtered.map((o) => `
       <tr>
         <td><strong style="color: #38bdf8; font-family: monospace;">${o.numero}</strong></td>
         <td>${o.fecha ? o.fecha.split("-").reverse().join("/") : today}</td>
         <td><strong>${o.cliente.nombre}</strong></td>
         <td style="text-align: center;">
           <span class="user-historial-badge">
-            <i class="fa-solid fa-user-tie"></i> ${(o.usuario || getUsuarioActivo() || 'ADMIN').toUpperCase()}
+            <i class="fa-solid fa-user-tie"></i> ${(o.usuario_creador || o.usuario || 'OPERADOR').toUpperCase()}
           </span>
         </td>
         <td><span style="font-size: 11.5px; color: #94a3b8;">${o.condicion_nombre || 'Contado'}</span></td>
@@ -1772,7 +2083,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </span>
         </td>
         <td style="text-align: center;">
-          <button type="button" class="btn btn-primary btn-sm" onclick="window.verHistorialNV(${idx})" style="display: inline-flex; align-items: center; gap: 6px;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="window.verHistorialNV('${o.numero}')" style="display: inline-flex; align-items: center; gap: 6px;">
             <i class="fa-solid fa-print"></i> <span>Imprimir</span>
           </button>
         </td>
@@ -1782,10 +2093,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("filtro-historial").addEventListener("input", renderHistorial);
 
-  window.verHistorialNV = function(idx) {
+  window.verHistorialNV = function(targetNro) {
     const orders = getOrdersHistory(currentCompanyKey);
-    if (orders[idx]) {
-      abrirModalImpresion(orders[idx]);
+    const orderFound = orders.find(o => String(o.numero) === String(targetNro)) || orders[targetNro];
+    if (orderFound) {
+      abrirModalImpresion(orderFound);
     }
   };
 
@@ -1827,10 +2139,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Pestaña Clientes
   function renderClientesMaestro() {
-    const clientesList = window.getClientesPorEmpresa(currentCompanyKey);
     const tbody = document.getElementById("tabla-clientes-body");
-    const filtro = (document.getElementById("filtro-clientes-maestro").value || "").toLowerCase().trim();
+    if (!tbody) return;
+    const clientesList = (typeof window.getClientesPorEmpresa === 'function') ? (window.getClientesPorEmpresa(currentCompanyKey) || []) : [];
+    const filtroEl = document.getElementById("filtro-clientes-maestro");
+    const filtro = (filtroEl && filtroEl.value ? filtroEl.value : "").toLowerCase().trim();
     const badgeTotal = document.getElementById("badge-total-clientes-filtrados");
+    const empInfo = currentCompany || (typeof EMPRESAS_CONFIG !== 'undefined' && EMPRESAS_CONFIG[currentCompanyKey]) || { nombreCorto: (currentCompanyKey || 'PALAVERSICH').toUpperCase() };
 
     const filtered = clientesList.filter(c => 
       !filtro ||
@@ -1842,11 +2157,19 @@ document.addEventListener("DOMContentLoaded", () => {
       (c.nom_vende && c.nom_vende.toLowerCase().includes(filtro))
     );
 
+    const displayList = filtered.slice(0, 250);
+
     if (badgeTotal) {
-      badgeTotal.textContent = `${filtered.length.toLocaleString()} clientes`;
+      const suffix = filtered.length > 250 ? ` (mostrando primeros 250)` : '';
+      badgeTotal.textContent = `${filtered.length.toLocaleString()} clientes (${empInfo.nombreCorto})${suffix}`;
     }
 
-    tbody.innerHTML = filtered.map(c => `
+    if (displayList.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">No se encontraron clientes para la búsqueda en ${empInfo.nombreCorto}</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = displayList.map(c => `
       <tr>
         <td><strong style="color: #38bdf8; font-family: monospace;">${c.codigo}</strong></td>
         <td><strong style="color: #f1f5f9;">${c.nombre}</strong></td>
@@ -2229,27 +2552,26 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnHeaderUser = document.getElementById("btn-header-user");
   if (btnHeaderUser) {
     btnHeaderUser.addEventListener("click", () => {
-      navTabs.forEach(t => t.classList.remove("active"));
-      tabPanes.forEach(p => p.classList.remove("active"));
-      const configTabBtn = document.querySelector('.nav-tab[data-tab="tab-config"]');
-      const configTabPane = document.getElementById("tab-config");
-      if (configTabBtn) configTabBtn.classList.add("active");
-      if (configTabPane) {
-        configTabPane.classList.add("active");
-        cargarFormularioConfiguracion();
-        const userInput = document.getElementById("cfg-user-name");
-        if (userInput) {
-          userInput.focus();
-          userInput.select();
-        }
+      const currentActiveTab = document.querySelector(".nav-tab.active");
+      const currentTabId = currentActiveTab ? currentActiveTab.dataset.tab : "tab-nueva-nv";
+      if (currentTabId === "tab-nueva-nv" && tieneNotaDeVentaEnCurso()) {
+        mostrarModalAvisoNvPendiente("tab-config");
+        return;
+      }
+      ejecutarCambioPestana("tab-config");
+      const userInput = document.getElementById("cfg-user-name");
+      if (userInput) {
+        userInput.focus();
+        userInput.select();
       }
     });
   }
 
-  // Exponer setEmpresaActiva a nivel global para auth_system
+  // Exponer a nivel global para auth_system y navegación
   window.setEmpresaActivaGlobal = function(key) {
     setEmpresaActiva(key);
   };
+  window.ejecutarCambioPestana = ejecutarCambioPestana;
 
   // Inicialización de empresa y sesión
   const authSession = (window.CRMAuth && typeof window.CRMAuth.getAuthSession === "function") 
@@ -2267,11 +2589,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (window.CRMAuth && typeof window.CRMAuth.aplicarAislamientoEmpresa === "function") {
       window.CRMAuth.aplicarAislamientoEmpresa(authSession);
     }
+    ejecutarCambioPestana("tab-nueva-nv");
   } else {
     // Si no hay sesión, inicializar en Palaversich y mostrar modal de login
     setEmpresaActiva("palaversich");
     if (window.CRMAuth && typeof window.CRMAuth.mostrarPantallaLogin === "function") {
       window.CRMAuth.mostrarPantallaLogin();
     }
+    ejecutarCambioPestana("tab-nueva-nv");
   }
 });
